@@ -250,6 +250,14 @@
                     option.textContent = loc;
                     select.appendChild(option);
                 });
+                // Set default to manual location if available
+                fetch('/api/settings')
+                    .then(response => response.json())
+                    .then(settings => {
+                        if (settings.manual_location) {
+                            select.value = settings.manual_location;
+                        }
+                    });
             });
 
         function showSection(section) {
