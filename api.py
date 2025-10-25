@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, make_response
 import json
 import sqlite3
 from sensor import SEN0460, calculate_aqi
-from database import insert_reading, get_data, export_data
+from database import insert_reading, get_data, export_data, cleanup_old_data
 from config import load_settings, save_settings, get_location
 
 api = Blueprint('api', __name__)
@@ -87,3 +87,40 @@ def export():
         return output
     else:  # json
         return jsonify(data)
+
+@api.route('/readings')
+def readings():
+    limit = int(request.args.get('limit', 50))
+    offset = int(request.args.get('offset', 0))
+    location = request.args.get('location')
+    conn = sqlite3.connect('air_quality.db')
+    c = conn.cursor()
+    query = 'SELECT id, timestamp, location, pm1, pm25, pm10, aqi FROM readings WHERE 1=1'
+    params = []
+    if location:
+        query += ' AND location = ?'
+        params.append(location)
+    query += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?'
+    params.extend([limit, offset])
+    c.execute(query, params)
+    rows = c.fetchall()
+    conn.close()
+    data = []
+    for row in rows:
+        id_, ts, loc, pm1, pm25, pm10, aqi = row
+        data.append({
+            'id': id_,
+            'timestamp': ts,
+            'location': loc,
+            'pm1': pm1,
+            'pm25': pm25,
+            'pm10': pm10,
+            'aqi': aqi
+        })
+    return jsonify(data)
+
+@api.route('/cleanup', methods=['POST'])
+def cleanup():
+    days = int(request.get_json().get('days', 365))
+    cleanup_old_data(days)
+    return jsonify({'status': 'cleaned'})

@@ -10,11 +10,12 @@
     <nav style="background: #333; color: white; padding: 10px; margin-bottom: 20px;">
         <h1 style="margin: 0; display: inline;">🌬️ Air Quality Monitor</h1>
         <div style="float: right;">
-            <button onclick="showSection('dashboard')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Dashboard</button>
-            <button onclick="showSection('sensors')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Sensor Data</button>
-            <button onclick="showSection('device')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Device Info</button>
-            <button onclick="showSection('graphs')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Graphs</button>
-            <button id="settings-btn" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">⚙️ Settings</button>
+             <button onclick="showSection('dashboard')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Dashboard</button>
+             <button onclick="showSection('sensors')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Sensor Data</button>
+             <button onclick="showSection('device')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Device Info</button>
+             <button onclick="showSection('graphs')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Graphs</button>
+             <button onclick="showSection('data')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Data Management</button>
+             <button id="settings-btn" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">⚙️ Settings</button>
         </div>
     </nav>
     <div class="container">
@@ -121,9 +122,34 @@
                 <h3>Sensor Info</h3>
                 <div class="metric">
                     Firmware Version: <span id="version" class="value">--</span>
-                </div>
-            </div>
-        </div>
+             </div>
+         </div>
+         <div id="data-section" class="section" style="display: none;">
+             <div class="data-card">
+                 <h3>Data Management</h3>
+                 <div>
+                     <label>Location: <select id="data-location"><option value="">All Locations</option></select></label>
+                     <button onclick="loadReadings()">Load Data</button>
+                     <button onclick="cleanupData()">Clean Old Data (>30 days)</button>
+                     <div id="data-loading" class="loading" style="display: none;"></div>
+                 </div>
+                 <table id="data-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                     <thead>
+                         <tr>
+                             <th style="border: 1px solid #ddd; padding: 8px;">Timestamp</th>
+                             <th style="border: 1px solid #ddd; padding: 8px;">Location</th>
+                             <th style="border: 1px solid #ddd; padding: 8px;">PM1.0</th>
+                             <th style="border: 1px solid #ddd; padding: 8px;">PM2.5</th>
+                             <th style="border: 1px solid #ddd; padding: 8px;">PM10</th>
+                             <th style="border: 1px solid #ddd; padding: 8px;">AQI</th>
+                         </tr>
+                     </thead>
+                     <tbody id="data-tbody">
+                     </tbody>
+                 </table>
+             </div>
+         </div>
+     </div>
         <div id="graphs-section" class="section" style="display: none;">
             <div class="data-card">
                 <h3>Data Graphs</h3>
@@ -273,19 +299,23 @@
         fetch('/api/locations')
             .then(response => response.json())
             .then(locations => {
-                const select = document.getElementById('graph-location');
-                locations.forEach(loc => {
-                    const option = document.createElement('option');
-                    option.value = loc;
-                    option.textContent = loc;
-                    select.appendChild(option);
+                const selects = ['graph-location', 'data-location'];
+                selects.forEach(selId => {
+                    const select = document.getElementById(selId);
+                    locations.forEach(loc => {
+                        const option = document.createElement('option');
+                        option.value = loc;
+                        option.textContent = loc;
+                        select.appendChild(option);
+                    });
                 });
                 // Set default to manual location if available
                 fetch('/api/settings')
                     .then(response => response.json())
                     .then(settings => {
                         if (settings.manual_location) {
-                            select.value = settings.manual_location;
+                            document.getElementById('graph-location').value = settings.manual_location;
+                            document.getElementById('data-location').value = settings.manual_location;
                         }
                     });
             });
@@ -481,6 +511,47 @@
             const location = document.getElementById('graph-location').value;
             const url = `/api/export?format=csv${location ? '&location=' + encodeURIComponent(location) : ''}`;
             window.open(url, '_blank');
+        }
+
+        function loadReadings() {
+            const location = document.getElementById('data-location').value;
+            const loading = document.getElementById('data-loading');
+            loading.style.display = 'inline-block';
+            const url = `/api/readings?limit=100${location ? '&location=' + encodeURIComponent(location) : ''}`;
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('data-tbody');
+                    tbody.innerHTML = '';
+                    data.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="border: 1px solid #ddd; padding: 8px;">${new Date(row.timestamp).toLocaleString()}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.location}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.pm1 || 'N/A'}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.pm25}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.pm10 || 'N/A'}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${row.aqi}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .finally(() => {
+                    loading.style.display = 'none';
+                });
+        }
+
+        function cleanupData() {
+            if (confirm('Are you sure you want to delete data older than 30 days?')) {
+                fetch('/api/cleanup', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({days: 30})
+                }).then(() => {
+                    alert('Old data cleaned.');
+                    loadReadings(); // Refresh the table
+                });
+            }
         }
     </script>
 </body>
