@@ -3,13 +3,13 @@
 PID_FILE = app.pid
 
 start:
-	@echo "Starting Air Quality Monitor..."
-	@-pkill -f "python app.py" 2>/dev/null || true
+	@echo "Starting Air Quality Monitor with identifier aqibot..."
+	@-pkill -f "aqibot" 2>/dev/null || true
 	@rm -f $(PID_FILE)
 	@sleep 1
 	@python app.py &
 	@echo $$! > $(PID_FILE)
-	@echo "App started. Access at http://$$(hostname -I | awk '{print $$1}'):5000"
+	@echo "App started with identifier aqibot. Access at http://$$(hostname -I | awk '{print $$1}'):5000"
 
 stop:
 	@echo "Stopping Air Quality Monitor..."
