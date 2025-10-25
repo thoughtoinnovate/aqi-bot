@@ -26,6 +26,7 @@
             </div>
             <div style="text-align: center; margin: 10px 0; color: #666;">
                 Location: {{ device_info.location }}
+                <button onclick="openLocationModal()" style="margin-left: 10px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Change</button>
             </div>
             <div id="health-advice" class="health-advice" style="text-align: center;"></div>
         </div>
@@ -210,6 +211,20 @@
             </form>
         </div>
     </div>
+
+    <!-- Location Modal -->
+    <div id="location-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; width: 350px;">
+            <h3>Change Location</h3>
+            <form id="location-form">
+                <label><input type="radio" name="location-type" value="auto" checked> Use Auto-Detected Location</label><br><br>
+                <label><input type="radio" name="location-type" value="custom"> Custom Location</label><br>
+                <input type="text" id="custom-location-input" placeholder="Enter custom location" style="width: 100%; margin-top: 5px;" disabled><br><br>
+                <button type="submit">Save</button>
+                <button type="button" onclick="closeLocationModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const healthLevels = {
@@ -323,6 +338,61 @@
         // Settings modal
         document.getElementById('settings-btn').onclick = () => {
             document.getElementById('settings-modal').style.display = 'block';
+        };
+
+        // Location modal
+        function openLocationModal() {
+            document.getElementById('location-modal').style.display = 'block';
+            // Load current settings
+            fetch('/api/settings')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.manual_location) {
+                        document.querySelector('input[name="location-type"][value="custom"]').checked = true;
+                        document.getElementById('custom-location-input').value = data.manual_location;
+                        document.getElementById('custom-location-input').disabled = false;
+                    } else {
+                        document.querySelector('input[name="location-type"][value="auto"]').checked = true;
+                        document.getElementById('custom-location-input').disabled = true;
+                    }
+                });
+        }
+
+        function closeLocationModal() {
+            document.getElementById('location-modal').style.display = 'none';
+        }
+
+        // Handle radio buttons
+        document.querySelectorAll('input[name="location-type"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const customInput = document.getElementById('custom-location-input');
+                customInput.disabled = radio.value !== 'custom';
+                if (radio.value === 'custom') {
+                    customInput.focus();
+                }
+            });
+        });
+
+        document.getElementById('location-form').onsubmit = (e) => {
+            e.preventDefault();
+            const type = document.querySelector('input[name="location-type"]:checked').value;
+            let newLocation = '';
+            if (type === 'custom') {
+                newLocation = document.getElementById('custom-location-input').value.trim();
+                if (!newLocation) {
+                    alert('Please enter a custom location.');
+                    return;
+                }
+            }
+            // Update settings
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ manual_location: newLocation })
+            }).then(() => {
+                closeLocationModal();
+                location.reload(); // Reload to update location display
+            });
         };
 
         function closeSettings() {
