@@ -11,6 +11,7 @@
         <h1 style="margin: 0; display: inline;">🌬️ Air Quality Monitor</h1>
         <div style="float: right;">
             <button onclick="showSection('dashboard')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Dashboard</button>
+            <button onclick="showSection('sensors')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Sensor Data</button>
             <button onclick="showSection('graphs')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Graphs</button>
             <button id="settings-btn" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">⚙️ Settings</button>
         </div>
@@ -18,20 +19,11 @@
     <div class="container">
         <div id="dashboard-section" class="section">
         <div class="data-card">
-            <h3>Particulate Matter Concentrations</h3>
-            <div class="metric">
-                PM1.0: <span id="pm1" class="value">--</span> µg/m³
+            <h3>Air Quality Index</h3>
+            <div class="metric" style="font-size: 3em; text-align: center;">
+                <span id="aqi" class="value aqi">--</span>
             </div>
-            <div class="metric">
-                PM2.5: <span id="pm25" class="value">--</span> µg/m³
-            </div>
-            <div class="metric">
-                PM10: <span id="pm10" class="value">--</span> µg/m³
-            </div>
-            <div class="metric">
-                Air Quality Index: <span id="aqi" class="value aqi">--</span>
-            </div>
-            <div id="health-advice" class="health-advice"></div>
+            <div id="health-advice" class="health-advice" style="text-align: center;"></div>
         </div>
         <div class="data-card">
             <h3>Particle Counts (per 0.1L air)</h3>
@@ -110,6 +102,47 @@
             </table>
             <p><strong>Ideal Range:</strong> AQI 0-50 (PM2.5 <12 µg/m³) - Air quality is considered satisfactory.</p>
         </div>
+        </div>
+        <div id="sensors-section" class="section" style="display: none;">
+            <div class="data-card">
+                <h3>Particulate Matter Concentrations</h3>
+                <div class="metric">
+                    PM1.0: <span id="pm1" class="value">--</span> µg/m³
+                </div>
+                <div class="metric">
+                    PM2.5: <span id="pm25" class="value">--</span> µg/m³
+                </div>
+                <div class="metric">
+                    PM10: <span id="pm10" class="value">--</span> µg/m³
+                </div>
+            </div>
+            <div class="data-card">
+                <h3>Particle Counts (per 0.1L air)</h3>
+                <div class="metric">
+                    0.3-0.5 µm: <span id="0_3_um" class="value">--</span>
+                </div>
+                <div class="metric">
+                    0.5-1.0 µm: <span id="0_5_um" class="value">--</span>
+                </div>
+                <div class="metric">
+                    1.0-2.5 µm: <span id="1_0_um" class="value">--</span>
+                </div>
+                <div class="metric">
+                    2.5-5.0 µm: <span id="2_5_um" class="value">--</span>
+                </div>
+                <div class="metric">
+                    5.0-10 µm: <span id="5_0_um" class="value">--</span>
+                </div>
+                <div class="metric">
+                    >10 µm: <span id="10_um" class="value">--</span>
+                </div>
+            </div>
+            <div class="data-card">
+                <h3>Sensor Info</h3>
+                <div class="metric">
+                    Firmware Version: <span id="version" class="value">--</span>
+                </div>
+            </div>
         </div>
         <div id="graphs-section" class="section" style="display: none;">
             <div class="data-card">
@@ -208,14 +241,15 @@
                         const currentRow = document.querySelector(`tr.${level}`);
                         if (currentRow) currentRow.classList.add('current');
 
-                        // Update particle counts
-                        Object.keys(data.particles).forEach(key => {
-                            const element = document.getElementById(key.replace('_', '_'));
-                            element.textContent = data.particles[key] !== null ? data.particles[key] : 'N/A';
-                        });
-
-                        // Update version
-                        document.getElementById('version').textContent = data.version !== null ? data.version : 'N/A';
+                        // Update particle counts and version only if in sensors section
+                        if (document.getElementById('sensors-section').style.display !== 'none') {
+                            Object.keys(data.particles).forEach(key => {
+                                const element = document.getElementById(key.replace('_', '_'));
+                                if (element) element.textContent = data.particles[key] !== null ? data.particles[key] : 'N/A';
+                            });
+                            const versionEl = document.getElementById('version');
+                            if (versionEl) versionEl.textContent = data.version !== null ? data.version : 'N/A';
+                        }
                     }
                     document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
                 })
