@@ -12,6 +12,7 @@
         <div style="float: right;">
             <button onclick="showSection('dashboard')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Dashboard</button>
             <button onclick="showSection('sensors')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Sensor Data</button>
+            <button onclick="showSection('device')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Device Info</button>
             <button onclick="showSection('graphs')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Graphs</button>
             <button id="settings-btn" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">⚙️ Settings</button>
         </div>
@@ -25,41 +26,47 @@
             </div>
             <div id="health-advice" class="health-advice" style="text-align: center;"></div>
         </div>
-        <div class="data-card">
-            <h3>Particle Counts (per 0.1L air)</h3>
-            <div class="metric">
-                0.3-0.5 µm: <span id="0_3_um" class="value">--</span>
-            </div>
-            <div class="metric">
-                0.5-1.0 µm: <span id="0_5_um" class="value">--</span>
-            </div>
-            <div class="metric">
-                1.0-2.5 µm: <span id="1_0_um" class="value">--</span>
-            </div>
-            <div class="metric">
-                2.5-5.0 µm: <span id="2_5_um" class="value">--</span>
-            </div>
-            <div class="metric">
-                5.0-10 µm: <span id="5_0_um" class="value">--</span>
-            </div>
-            <div class="metric">
-                >10 µm: <span id="10_um" class="value">--</span>
-            </div>
-        </div>
-        <div class="data-card">
-            <h3>Sensor Info</h3>
-            <div class="metric">
-                Firmware Version: <span id="version" class="value">--</span>
-            </div>
-        </div>
         <div id="last-updated" class="last-updated">Last updated: --</div>
         <div class="data-card">
-            <h3>Device Information</h3>
-            <p><strong>Hostname:</strong> {{ device_info.hostname }}</p>
-            <p><strong>IP Address:</strong> {{ device_info.ip }}</p>
-            <p><strong>Platform:</strong> {{ device_info.platform }}</p>
-            <p><strong>Sensor:</strong> {{ device_info.sensor_model }}</p>
-            <p><strong>Location:</strong> {{ device_info.location }}</p>
+            <h3>AQI Categories & PM2.5 Ranges</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <th style="border: 1px solid #ddd; padding: 8px;">AQI Range</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">PM2.5 (µg/m³)</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Category</th>
+                </tr>
+                <tr class="good">
+                    <td>0-50</td>
+                    <td>0-12.0</td>
+                    <td>Good</td>
+                </tr>
+                <tr class="moderate">
+                    <td>51-100</td>
+                    <td>12.1-35.4</td>
+                    <td>Moderate</td>
+                </tr>
+                <tr class="unhealthy">
+                    <td>101-150</td>
+                    <td>35.5-55.4</td>
+                    <td>Unhealthy for Sensitive Groups</td>
+                </tr>
+                <tr class="very-unhealthy">
+                    <td>151-200</td>
+                    <td>55.5-150.4</td>
+                    <td>Unhealthy</td>
+                </tr>
+                <tr class="hazardous">
+                    <td>201-300</td>
+                    <td>150.5-250.4</td>
+                    <td>Very Unhealthy</td>
+                </tr>
+                <tr class="hazardous">
+                    <td>301-500</td>
+                    <td>250.5-500.4</td>
+                    <td>Hazardous</td>
+                </tr>
+            </table>
+            <p><strong>Ideal Range:</strong> AQI 0-50 (PM2.5 <12 µg/m³) - Air quality is considered satisfactory.</p>
         </div>
         <div class="data-card">
             <h3>AQI Categories & PM2.5 Ranges</h3>
@@ -102,6 +109,16 @@
             </table>
             <p><strong>Ideal Range:</strong> AQI 0-50 (PM2.5 <12 µg/m³) - Air quality is considered satisfactory.</p>
         </div>
+        </div>
+        <div id="device-section" class="section" style="display: none;">
+            <div class="data-card">
+                <h3>Device Information</h3>
+                <p><strong>Hostname:</strong> {{ device_info.hostname }}</p>
+                <p><strong>IP Address:</strong> {{ device_info.ip }}</p>
+                <p><strong>Platform:</strong> {{ device_info.platform }}</p>
+                <p><strong>Sensor:</strong> {{ device_info.sensor_model }}</p>
+                <p><strong>Location:</strong> {{ device_info.location }}</p>
+            </div>
         </div>
         <div id="sensors-section" class="section" style="display: none;">
             <div class="data-card">
