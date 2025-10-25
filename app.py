@@ -6,9 +6,11 @@ import json
 import os
 import requests
 from sensor import SEN0460, calculate_aqi
+from database import init_db, insert_reading, get_data, cleanup_old_data
 
 app = Flask(__name__)
 sensor = SEN0460()
+init_db()
 
 SETTINGS_FILE = 'settings.json'
 
@@ -34,7 +36,8 @@ def get_location():
 def index():
     hostname = socket.gethostname()
     ip = socket.gethostbyname(hostname)
-    location = get_location()
+    settings = load_settings()
+    location = settings.get('manual_location', '') or get_location()
     device_info = {
         'hostname': hostname,
         'ip': ip,
@@ -42,7 +45,6 @@ def index():
         'sensor_model': 'DFRobot SEN0460 PM2.5 Laser Sensor',
         'location': location
     }
-    settings = load_settings()
     return render_template('index.html', device_info=device_info, settings=settings)
 
 @app.route('/api/data')
@@ -57,6 +59,8 @@ def data():
         sensor.set_lowpower()
     if concentrations['pm25'] is not None:
         aqi = calculate_aqi(concentrations['pm25'])
+        location = settings.get('manual_location', '') or get_location()
+        insert_reading(location, concentrations['pm1'], concentrations['pm25'], concentrations['pm10'], aqi, counts)
         return jsonify({
             'pm1': concentrations['pm1'],
             'pm25': concentrations['pm25'],
@@ -76,6 +80,14 @@ def settings_api():
         return jsonify({'status': 'saved'})
     else:
         return jsonify(load_settings())
+
+@app.route('/api/graph_data')
+def graph_data():
+    param = request.args.get('param', 'aqi')
+    range_type = request.args.get('range', 'day')
+    location = request.args.get('location', None)
+    data = get_data(param, range_type, location)
+    return jsonify(data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

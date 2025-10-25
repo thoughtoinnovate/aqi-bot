@@ -103,6 +103,30 @@
             </table>
             <p><strong>Ideal Range:</strong> AQI 0-50 (PM2.5 <12 µg/m³) - Air quality is considered satisfactory.</p>
         </div>
+        <div class="data-card">
+            <h3>Data Graphs</h3>
+            <div>
+                <label>Parameter: 
+                    <select id="graph-param">
+                        <option value="aqi">AQI</option>
+                        <option value="pm1">PM1.0</option>
+                        <option value="pm25">PM2.5</option>
+                        <option value="pm10">PM10</option>
+                    </select>
+                </label>
+                <label>Time Range: 
+                    <select id="graph-range">
+                        <option value="hour">Last 24 Hours</option>
+                        <option value="day">Last 7 Days</option>
+                        <option value="week">Last 4 Weeks</option>
+                        <option value="month">Last 12 Months</option>
+                        <option value="year">All Years</option>
+                    </select>
+                </label>
+                <button onclick="loadGraph()">Load Graph</button>
+            </div>
+            <canvas id="graph-canvas" width="400" height="200"></canvas>
+        </div>
     </div>
 
     <!-- Settings Modal -->
@@ -112,11 +136,13 @@
             <form id="settings-form">
                 <label>Update Interval (seconds): <input type="number" id="update-interval" min="1" max="60"></label><br><br>
                 <label>Power Save: <input type="checkbox" id="power-save"></label><br><br>
+                <label>Manual Location: <input type="text" id="manual-location" placeholder="e.g., Home, Office"></label><br><br>
                 <button type="submit">Save</button>
                 <button type="button" onclick="closeSettings()">Cancel</button>
             </form>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         const healthLevels = {
             good: { text: "Air quality is satisfactory, and air pollution poses little or no risk.", color: "#28a745" },
@@ -196,6 +222,7 @@
             .then(data => {
                 document.getElementById('update-interval').value = data.update_interval / 1000;
                 document.getElementById('power-save').checked = data.power_save;
+                document.getElementById('manual-location').value = data.manual_location || '';
             });
 
         // Settings modal
@@ -211,7 +238,8 @@
             e.preventDefault();
             const newSettings = {
                 update_interval: parseInt(document.getElementById('update-interval').value) * 1000,
-                power_save: document.getElementById('power-save').checked
+                power_save: document.getElementById('power-save').checked,
+                manual_location: document.getElementById('manual-location').value.trim()
             };
             fetch('/api/settings', {
                 method: 'POST',
@@ -223,8 +251,43 @@
                 clearInterval(intervalId);
                 updateInterval = newSettings.update_interval;
                 intervalId = setInterval(updateData, updateInterval);
+                // Reload page to update location
+                location.reload();
             });
         };
+
+        let chart;
+        function loadGraph() {
+            const param = document.getElementById('graph-param').value;
+            const range = document.getElementById('graph-range').value;
+            fetch(`/api/graph_data?param=${param}&range=${range}`)
+                .then(response => response.json())
+                .then(data => {
+                    const labels = data.map(d => d.time);
+                    const values = data.map(d => d.value);
+                    const ctx = document.getElementById('graph-canvas').getContext('2d');
+                    if (chart) chart.destroy();
+                    chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: param.toUpperCase(),
+                                data: values,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                });
+        }
     </script>
 </body>
 </html>
