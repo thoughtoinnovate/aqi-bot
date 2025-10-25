@@ -1,5 +1,6 @@
 import smbus2
 import time
+import logging
 
 class SEN0460:
     # Define constants for selecting different particle measurement types
@@ -23,15 +24,17 @@ class SEN0460:
             self.bus = smbus2.SMBus(bus)
         except Exception as e:
             self.bus = None
-            print(f"Failed to initialize I2C bus: {e}")
+            logging.error(f"Failed to initialize I2C bus: {e}")
         self.addr = addr
 
     def gain_particle_concentration_ugm3(self, PMtype):
         """Get the particle concentration in µg/m³ for a specified PM type."""
+        if self.bus is None:
+            return None
         try:
             data = self.bus.read_i2c_block_data(self.addr, PMtype, 2)
             return (data[0] << 8) | data[1]
-        except:
+        except Exception as e:
             return None
 
     def gain_all_concentrations(self):
@@ -58,32 +61,40 @@ class SEN0460:
 
     def gain_particlenum_every0_1l(self, PMtype):
         """Get the particle count per 0.1L of air for a specified PM type."""
+        if self.bus is None:
+            return None
         try:
             data = self.bus.read_i2c_block_data(self.addr, PMtype, 2)
             return (data[0] << 8) | data[1]
-        except:
+        except Exception as e:
             return None
 
     def gain_version(self):
         """Get the sensor's firmware version."""
+        if self.bus is None:
+            return None
         try:
             data = self.bus.read_i2c_block_data(self.addr, self.PARTICLENUM_GAIN_VERSION, 1)
             return data[0]
-        except:
+        except Exception as e:
             return None
 
     def set_lowpower(self):
         """Set the sensor to low power mode."""
+        if self.bus is None:
+            return
         try:
             self.bus.write_i2c_block_data(self.addr, 0x01, [0x01])
-        except:
+        except Exception as e:
             pass
 
     def awake(self):
         """Wake up the sensor from low power mode."""
+        if self.bus is None:
+            return
         try:
             self.bus.write_i2c_block_data(self.addr, 0x01, [0x02])
-        except:
+        except Exception as e:
             pass
 
 def calculate_aqi(pm25):
@@ -110,8 +121,8 @@ if __name__ == "__main__":
         pm25 = sensor.gain_particle_concentration_ugm3(SEN0460.PARTICLE_PM2_5_STANDARD)
         if pm25 is not None:
             aqi = calculate_aqi(pm25)
-            print(f"PM2.5: {pm25} µg/m³, AQI: {aqi}")
+            logging.info(f"PM2.5: {pm25} µg/m³, AQI: {aqi}")
         else:
-            print("Failed to read sensor")
+            logging.warning("Failed to read sensor")
         sensor.set_lowpower()
         time.sleep(5)

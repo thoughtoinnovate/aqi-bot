@@ -1,9 +1,20 @@
 from flask import Flask, render_template
 import socket
 import platform
+import logging
 from database import init_db
 from config import load_settings, get_location
 from api import api
+
+# Configure logging to file
+logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Configure werkzeug logger to also log to file
+werkzeug_logger = logging.getLogger('werkzeug')
+werkzeug_logger.setLevel(logging.INFO)
+handler = logging.FileHandler('app.log')
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+werkzeug_logger.addHandler(handler)
 
 app = Flask(__name__)
 app.register_blueprint(api, url_prefix='/api')

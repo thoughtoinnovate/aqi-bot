@@ -21,5 +21,5 @@ def get_location():
         response = requests.get('https://ipinfo.io/json', timeout=5)
         data = response.json()
         return f"{data.get('city', 'Unknown')}, {data.get('region', 'Unknown')}, {data.get('country', 'Unknown')}"
-    except:
+    except Exception as e:
         return "Location detection failed"

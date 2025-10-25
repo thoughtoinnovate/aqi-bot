@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, make_response
+from flask import Blueprint, jsonify, request, make_response, current_app
 import json
 import sqlite3
 from sensor import SEN0460, calculate_aqi
@@ -15,7 +15,7 @@ def data():
         settings = load_settings()
         sensor.awake()
         import time
-        time.sleep(1)
+        time.sleep(5)
         concentrations = sensor.gain_all_concentrations()
         counts = sensor.gain_particle_counts()
         version = sensor.gain_version()
@@ -25,6 +25,7 @@ def data():
             aqi = calculate_aqi(concentrations['pm25'])
             location = settings.get('manual_location', '') or get_location()
             insert_reading(location, concentrations['pm1'], concentrations['pm25'], concentrations['pm10'], aqi, counts)
+            current_app.logger.info(f"Inserted reading: PM2.5={concentrations['pm25']}, AQI={aqi}")
             return jsonify({
                 'pm1': concentrations['pm1'],
                 'pm25': concentrations['pm25'],
@@ -57,11 +58,10 @@ def graph_data():
 
 @api.route('/locations')
 def get_locations():
-    conn = sqlite3.connect('air_quality.db')
-    c = conn.cursor()
-    c.execute('SELECT DISTINCT location FROM readings')
-    locations = [row[0] for row in c.fetchall()]
-    conn.close()
+    with sqlite3.connect('air_quality.db') as conn:
+        c = conn.cursor()
+        c.execute('SELECT DISTINCT location FROM readings')
+        locations = [row[0] for row in c.fetchall()]
     return jsonify(locations)
 
 @api.route('/export')
@@ -93,18 +93,17 @@ def readings():
     limit = int(request.args.get('limit', 50))
     offset = int(request.args.get('offset', 0))
     location = request.args.get('location')
-    conn = sqlite3.connect('air_quality.db')
-    c = conn.cursor()
-    query = 'SELECT id, timestamp, location, pm1, pm25, pm10, aqi FROM readings WHERE 1=1'
-    params = []
-    if location:
-        query += ' AND location = ?'
-        params.append(location)
-    query += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?'
-    params.extend([limit, offset])
-    c.execute(query, params)
-    rows = c.fetchall()
-    conn.close()
+    with sqlite3.connect('air_quality.db') as conn:
+        c = conn.cursor()
+        query = 'SELECT id, timestamp, location, pm1, pm25, pm10, aqi FROM readings WHERE 1=1'
+        params = []
+        if location:
+            query += ' AND location = ?'
+            params.append(location)
+        query += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?'
+        params.extend([limit, offset])
+        c.execute(query, params)
+        rows = c.fetchall()
     data = []
     for row in rows:
         id_, ts, loc, pm1, pm25, pm10, aqi = row
@@ -124,3 +123,29 @@ def cleanup():
     days = int(request.get_json().get('days', 365))
     cleanup_old_data(days)
     return jsonify({'status': 'cleaned'})
+
+@api.route('/logs')
+def logs():
+    try:
+        with open('app.log', 'r') as f:
+            lines = f.readlines()
+        parsed_logs = []
+        if not lines:
+            parsed_logs = [{'timestamp': 'N/A', 'level': 'INFO', 'message': 'No logs available yet'}]
+        else:
+            for line in lines[-100:]:  # last 100 lines
+                line = line.strip()
+                if ' - ' in line:
+                    parts = line.split(' - ', 2)
+                    if len(parts) >= 2:
+                        timestamp = parts[0]
+                        level = parts[1] if len(parts) > 2 else 'INFO'
+                        message = parts[2] if len(parts) > 2 else parts[1]
+                        parsed_logs.append({'timestamp': timestamp, 'level': level, 'message': message})
+                    else:
+                        parsed_logs.append({'timestamp': 'N/A', 'level': 'INFO', 'message': line})
+                else:
+                    parsed_logs.append({'timestamp': 'N/A', 'level': 'INFO', 'message': line})
+        return jsonify(parsed_logs)
+    except Exception as e:
+        return jsonify({'error': str(e)})

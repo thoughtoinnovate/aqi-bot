@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Quality Monitor</title>
+    <title>Air Quality Monitor v2</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -14,23 +14,31 @@
              <button onclick="showSection('sensors')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Sensor Data</button>
              <button onclick="showSection('device')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Device Info</button>
              <button onclick="showSection('graphs')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Graphs</button>
-             <button onclick="showSection('data')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Data Management</button>
-             <button id="settings-btn" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">⚙️ Settings</button>
+              <button onclick="showSection('data')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Data Management</button>
+              <button onclick="showSection('logs')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Logs</button>
+              <button id="settings-btn" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">⚙️ Settings</button>
         </div>
     </nav>
     <div class="container">
         <div id="dashboard-section" class="section">
-        <div class="data-card">
-            <h3>Air Quality Index</h3>
-            <div class="metric" style="font-size: 3em; text-align: center;">
-                <span id="aqi" class="value aqi">--</span>
-            </div>
-            <div style="text-align: center; margin: 10px 0; color: #666;">
-                Location: {{ device_info.location }}
-                <button onclick="openLocationModal()" style="margin-left: 10px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Change</button>
-            </div>
-            <div id="health-advice" class="health-advice" style="text-align: center;"></div>
-        </div>
+         <div class="data-card">
+             <h3>Air Quality Index</h3>
+             <div class="metric" style="font-size: 3em; text-align: center;">
+                 <span id="aqi" class="value aqi">--</span>
+             </div>
+             <div style="text-align: center; margin: 10px 0; color: #666;">
+                 Location: {{ device_info.location }}
+                 <button onclick="openLocationModal()" style="margin-left: 10px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Change</button>
+             </div>
+             <div id="health-advice" class="health-advice" style="text-align: center;"></div>
+             <div class="share-buttons" style="text-align: center; margin-top: 20px;">
+                 <button onclick="shareNative()" style="margin: 5px; padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Share</button>
+                 <button onclick="shareWhatsApp()" style="margin: 5px; padding: 8px 12px; background: #25D366; color: white; border: none; border-radius: 5px; cursor: pointer;">WhatsApp</button>
+                 <button onclick="shareTwitter()" style="margin: 5px; padding: 8px 12px; background: #1DA1F2; color: white; border: none; border-radius: 5px; cursor: pointer;">Twitter</button>
+                 <button onclick="shareFacebook()" style="margin: 5px; padding: 8px 12px; background: #1877F2; color: white; border: none; border-radius: 5px; cursor: pointer;">Facebook</button>
+                 <button onclick="shareCopy()" style="margin: 5px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">Copy</button>
+             </div>
+         </div>
         <div id="last-updated" class="last-updated">Last updated: --</div>
         <div class="data-card">
             <h3>AQI Categories & PM2.5 Ranges</h3>
@@ -124,15 +132,17 @@
                     Firmware Version: <span id="version" class="value">--</span>
              </div>
          </div>
-         <div id="data-section" class="section" style="display: none;">
+         <div id="data-section" class="section" style="display: block;">
              <div class="data-card">
                  <h3>Data Management</h3>
-                 <div>
-                     <label>Location: <select id="data-location"><option value="">All Locations</option></select></label>
-                     <button onclick="loadReadings()">Load Data</button>
-                     <button onclick="cleanupData()">Clean Old Data (>30 days)</button>
-                     <div id="data-loading" class="loading" style="display: none;"></div>
-                 </div>
+                  <div>
+                      <label>Location: <select id="data-location"><option value="">All Locations</option></select></label>
+                      <button onclick="loadReadings()">Load Data</button>
+                      <button onclick="loadMoreReadings()">Load More</button>
+                      <input type="number" id="cleanup-days" min="1" max="365" value="30" style="width: 60px;"> days
+                      <button onclick="cleanupData()">Clean Old Data</button>
+                      <div id="data-loading" class="loading" style="display: none;"></div>
+                  </div>
                  <table id="data-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
                      <thead>
                          <tr>
@@ -145,11 +155,30 @@
                          </tr>
                      </thead>
                      <tbody id="data-tbody">
+                         <tr><td colspan="6">Loading...</td></tr>
+                     </tbody>
+                 </table>
+              </div>
+          </div>
+         <div id="logs-section" class="section" style="display: block;">
+             <div class="data-card">
+                 <h3>Application Logs</h3>
+                 <button onclick="loadLogs()">Load Logs</button>
+                 <table id="logs-table" style="width: 100%; border-collapse: collapse; margin-top: 20px; overflow-x: auto; display: block; white-space: nowrap;">
+                     <thead>
+                         <tr>
+                             <th style="border: 1px solid #ddd; padding: 8px;">Timestamp</th>
+                             <th style="border: 1px solid #ddd; padding: 8px;">Level</th>
+                             <th style="border: 1px solid #ddd; padding: 8px;">Message</th>
+                         </tr>
+                     </thead>
+                     <tbody id="logs-tbody">
+                         <tr><td colspan="3">Click Load Logs to view</td></tr>
                      </tbody>
                  </table>
              </div>
          </div>
-     </div>
+      </div>
         <div id="graphs-section" class="section" style="display: none;">
             <div class="data-card">
                 <h3>Data Graphs</h3>
@@ -315,8 +344,7 @@
                     .then(settings => {
                         if (settings.manual_location) {
                             document.getElementById('graph-location').value = settings.manual_location;
-                            // For data management, default to all locations
-                            // document.getElementById('data-location').value = settings.manual_location;
+                            document.getElementById('data-location').value = settings.manual_location;
                         }
                     });
             });
@@ -326,6 +354,8 @@
             document.getElementById(section + '-section').style.display = 'block';
             if (section === 'data') {
                 loadReadings();
+            } else if (section === 'logs') {
+                loadLogs();
             }
         }
 
@@ -463,6 +493,7 @@
         }
 
         let compChart;
+        let dataOffset = 0;
         function loadComparativeGraph() {
             const btn = document.getElementById('load-comp-btn');
             const loading = document.getElementById('graph-loading');
@@ -517,66 +548,189 @@
             window.open(url, '_blank');
         }
 
-        function loadReadings() {
+        function loadReadings(append) {
+            alert('Loading data');
+            if (append === undefined) append = false;
             const location = document.getElementById('data-location').value;
             const loading = document.getElementById('data-loading');
             loading.style.display = 'inline-block';
-            const url = `/api/readings?limit=100${location ? '&location=' + encodeURIComponent(location) : ''}`;
+            if (!append) {
+                dataOffset = 0;
+            }
+            const url = `/api/readings?limit=100&offset=${dataOffset}${location ? '&location=' + encodeURIComponent(location) : ''}`;
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
+                    console.log('loadReadings: received data, length:', data.length);
                     const tbody = document.getElementById('data-tbody');
-                    tbody.innerHTML = '';
-                    data.forEach(row => {
+                    if (!append) {
+                        tbody.innerHTML = '';
+                    }
+                    if (data.length === 0 && !append) {
                         const tr = document.createElement('tr');
-                        const td1 = document.createElement('td');
-                        td1.textContent = new Date(row.timestamp).toLocaleString();
-                        td1.style.border = '1px solid #ddd';
-                        td1.style.padding = '8px';
-                        const td2 = document.createElement('td');
-                        td2.textContent = row.location;
-                        td2.style.border = '1px solid #ddd';
-                        td2.style.padding = '8px';
-                        const td3 = document.createElement('td');
-                        td3.textContent = row.pm1 || 'N/A';
-                        td3.style.border = '1px solid #ddd';
-                        td3.style.padding = '8px';
-                        const td4 = document.createElement('td');
-                        td4.textContent = row.pm25;
-                        td4.style.border = '1px solid #ddd';
-                        td4.style.padding = '8px';
-                        const td5 = document.createElement('td');
-                        td5.textContent = row.pm10 || 'N/A';
-                        td5.style.border = '1px solid #ddd';
-                        td5.style.padding = '8px';
-                        const td6 = document.createElement('td');
-                        td6.textContent = row.aqi;
-                        td6.style.border = '1px solid #ddd';
-                        td6.style.padding = '8px';
-                        tr.appendChild(td1);
-                        tr.appendChild(td2);
-                        tr.appendChild(td3);
-                        tr.appendChild(td4);
-                        tr.appendChild(td5);
-                        tr.appendChild(td6);
+                        const td = document.createElement('td');
+                        td.colSpan = 6;
+                        td.textContent = 'No data available';
+                        td.style.textAlign = 'center';
+                        td.style.border = '1px solid #ddd';
+                        td.style.padding = '8px';
+                        tr.appendChild(td);
                         tbody.appendChild(tr);
-                    });
+                    } else {
+                        data.forEach(row => {
+                            const tr = document.createElement('tr');
+                            const td1 = document.createElement('td');
+                            td1.textContent = new Date(row.timestamp).toLocaleString();
+                            td1.style.border = '1px solid #ddd';
+                            td1.style.padding = '8px';
+                            const td2 = document.createElement('td');
+                            td2.textContent = row.location;
+                            td2.style.border = '1px solid #ddd';
+                            td2.style.padding = '8px';
+                            const td3 = document.createElement('td');
+                            td3.textContent = row.pm1 || 'N/A';
+                            td3.style.border = '1px solid #ddd';
+                            td3.style.padding = '8px';
+                            const td4 = document.createElement('td');
+                            td4.textContent = row.pm25 || 'N/A';
+                            td4.style.border = '1px solid #ddd';
+                            td4.style.padding = '8px';
+                            const td5 = document.createElement('td');
+                            td5.textContent = row.pm10 || 'N/A';
+                            td5.style.border = '1px solid #ddd';
+                            td5.style.padding = '8px';
+                            const td6 = document.createElement('td');
+                            td6.textContent = row.aqi || 'N/A';
+                            td6.style.border = '1px solid #ddd';
+                            td6.style.padding = '8px';
+                            tr.appendChild(td1);
+                            tr.appendChild(td2);
+                            tr.appendChild(td3);
+                            tr.appendChild(td4);
+                            tr.appendChild(td5);
+                            tr.appendChild(td6);
+                            tbody.appendChild(tr);
+                        });
+                        if (data.length > 0) {
+                            dataOffset += 100;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading readings:', error);
+                    const tbody = document.getElementById('data-tbody');
+                    if (!append) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; border: 1px solid #ddd; padding: 8px;">Error loading data</td></tr>';
+                    }
                 })
                 .finally(() => {
                     loading.style.display = 'none';
                 });
         }
 
+        function loadMoreReadings() {
+            loadReadings(true);
+        }
+
         function cleanupData() {
-            if (confirm('Are you sure you want to delete data older than 30 days?')) {
+            const days = parseInt(document.getElementById('cleanup-days').value) || 30;
+            if (confirm(`Are you sure you want to delete data older than ${days} days?`)) {
                 fetch('/api/cleanup', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({days: 30})
+                    body: JSON.stringify({days: days})
                 }).then(() => {
                     alert('Old data cleaned.');
                     loadReadings(); // Refresh the table
                 });
+            }
+        }
+
+        function loadLogs() {
+            alert('Loading logs');
+            fetch('/api/logs')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('logs-tbody');
+                    tbody.innerHTML = '';
+                    if (data.error) {
+                        tbody.innerHTML = '<tr><td colspan="3">Error: ' + data.error + '</td></tr>';
+                        return;
+                    }
+                    data.forEach(log => {
+                        const tr = document.createElement('tr');
+                        const td1 = document.createElement('td');
+                        td1.textContent = log.timestamp;
+                        td1.style.border = '1px solid #ddd';
+                        td1.style.padding = '8px';
+                        const td2 = document.createElement('td');
+                        td2.textContent = log.level;
+                        td2.style.border = '1px solid #ddd';
+                        td2.style.padding = '8px';
+                        const td3 = document.createElement('td');
+                        td3.textContent = log.message;
+                        td3.style.border = '1px solid #ddd';
+                        td3.style.padding = '8px';
+                        tr.appendChild(td1);
+                        tr.appendChild(td2);
+                        tr.appendChild(td3);
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading logs:', error);
+                    document.getElementById('logs-tbody').innerHTML = '<tr><td colspan="3">Error loading logs</td></tr>';
+                });
+        }
+
+        // Load data and logs on page load
+        loadReadings();
+        loadLogs();
+
+        function shareWhatsApp() {
+            const aqi = document.getElementById('aqi').textContent;
+            const pm25 = document.getElementById('pm25').textContent;
+            const text = `Current Air Quality: AQI ${aqi}, PM2.5 ${pm25} µg/m³. Check live at ${window.location.href}`;
+            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function shareTwitter() {
+            const aqi = document.getElementById('aqi').textContent;
+            const pm25 = document.getElementById('pm25').textContent;
+            const text = `Current Air Quality: AQI ${aqi}, PM2.5 ${pm25} µg/m³. Check live at ${window.location.href}`;
+            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function shareFacebook() {
+            const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`;
+            window.open(url, '_blank');
+        }
+
+        function shareCopy() {
+            const aqi = document.getElementById('aqi').textContent;
+            const pm25 = document.getElementById('pm25').textContent;
+            const text = `Current Air Quality: AQI ${aqi}, PM2.5 ${pm25} µg/m³. Check live at ${window.location.href}`;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
+            } else {
+                alert('Copy not supported in this browser.');
+            }
+        }
+
+        function shareNative() {
+            const aqi = document.getElementById('aqi').textContent;
+            const pm25 = document.getElementById('pm25').textContent;
+            const text = `Current Air Quality: AQI ${aqi}, PM2.5 ${pm25} µg/m³. Check live at ${window.location.href}`;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Air Quality Monitor',
+                    text: text,
+                    url: window.location.href
+                }).catch(err => console.error('Error sharing:', err));
+            } else {
+                alert('Native share not supported. Use the other buttons.');
             }
         }
     </script>
