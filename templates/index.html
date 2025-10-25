@@ -323,6 +323,9 @@
         function showSection(section) {
             document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
             document.getElementById(section + '-section').style.display = 'block';
+            if (section === 'data') {
+                loadReadings();
+            }
         }
 
         // Settings modal
