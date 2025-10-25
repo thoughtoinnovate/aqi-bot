@@ -152,7 +152,7 @@
                  <div id="graph-loading" class="loading" style="display: none;"></div>
                 </div>
                 <canvas id="graph-canvas" width="400" height="200"></canvas>
-                <h4>Comparative AQI by Location</h4>
+                 <h4 id="comp-title">Comparative AQI by Location</h4>
                 <canvas id="comp-graph-canvas" width="400" height="200"></canvas>
             </div>
         </div>
@@ -434,8 +434,10 @@
             const loading = document.getElementById('graph-loading');
             btn.disabled = true;
             loading.style.display = 'inline-block';
+            const param = document.getElementById('graph-param').value;
             const range = document.getElementById('graph-range').value;
-            fetch(`/api/graph_data?param=aqi&range=${range}`)
+            document.getElementById('comp-title').textContent = `Comparative ${param.toUpperCase()} by Location`;
+            fetch(`/api/graph_data?param=${param}&range=${range}`)
                 .then(response => response.json())
                 .then(allData => {
                     // Group by location
