@@ -315,7 +315,8 @@
                     .then(settings => {
                         if (settings.manual_location) {
                             document.getElementById('graph-location').value = settings.manual_location;
-                            document.getElementById('data-location').value = settings.manual_location;
+                            // For data management, default to all locations
+                            // document.getElementById('data-location').value = settings.manual_location;
                         }
                     });
             });
