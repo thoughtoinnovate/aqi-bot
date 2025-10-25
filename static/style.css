@@ -38,11 +38,12 @@ h1 {
 }
 
 .data-card {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 15px;
+    padding: 25px;
     margin: 20px 0;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .metric {
@@ -91,6 +92,66 @@ h1 {
 .error {
     color: #dc3545;
     font-weight: bold;
+}
+
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+button:hover {
+    background-color: #0056b3 !important;
+    transform: translateY(-2px);
+    transition: all 0.2s;
+}
+
+.data-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.data-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.metric {
+    transition: color 0.3s;
+}
+
+.metric:hover {
+    color: #007bff;
+}
+
+nav button {
+    transition: background-color 0.3s;
+}
+
+nav button:hover {
+    background-color: #555 !important;
+}
+
+.aqi {
+    transition: color 0.3s;
+}
+
+.section {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 table {

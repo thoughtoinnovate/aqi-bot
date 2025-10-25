@@ -133,8 +133,9 @@
                     </select>
                 </label>
                 <label>Location: <select id="graph-location"><option value="">All Locations</option></select></label>
-                <button onclick="loadGraph()">Load Graph</button>
-                <button onclick="loadComparativeGraph()">Compare Locations</button>
+                <button onclick="loadGraph()" id="load-graph-btn">Load Graph</button>
+                <button onclick="loadComparativeGraph()" id="load-comp-btn">Compare Locations</button>
+                <div id="graph-loading" class="loading" style="display: none;"></div>
                 </div>
                 <canvas id="graph-canvas" width="400" height="200"></canvas>
                 <h4>Comparative AQI by Location</h4>
@@ -298,6 +299,10 @@
 
         let chart;
         function loadGraph() {
+            const btn = document.getElementById('load-graph-btn');
+            const loading = document.getElementById('graph-loading');
+            btn.disabled = true;
+            loading.style.display = 'inline-block';
             const param = document.getElementById('graph-param').value;
             const range = document.getElementById('graph-range').value;
             const location = document.getElementById('graph-location').value;
@@ -323,16 +328,28 @@
                         },
                         options: {
                             responsive: true,
+                            plugins: {
+                                legend: { display: true },
+                                tooltip: { mode: 'index', intersect: false }
+                            },
                             scales: {
                                 y: { beginAtZero: true }
                             }
                         }
                     });
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    loading.style.display = 'none';
                 });
         }
 
         let compChart;
         function loadComparativeGraph() {
+            const btn = document.getElementById('load-comp-btn');
+            const loading = document.getElementById('graph-loading');
+            btn.disabled = true;
+            loading.style.display = 'inline-block';
             const range = document.getElementById('graph-range').value;
             fetch(`/api/graph_data?param=aqi&range=${range}`)
                 .then(response => response.json())
@@ -358,9 +375,17 @@
                         data: { labels, datasets },
                         options: {
                             responsive: true,
+                            plugins: {
+                                legend: { display: true },
+                                tooltip: { mode: 'index', intersect: false }
+                            },
                             scales: { y: { beginAtZero: true } }
                         }
                     });
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    loading.style.display = 'none';
                 });
         }
     </script>
