@@ -529,14 +529,36 @@
                     tbody.innerHTML = '';
                     data.forEach(row => {
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td style="border: 1px solid #ddd; padding: 8px;">${new Date(row.timestamp).toLocaleString()}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${row.location}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${row.pm1 || 'N/A'}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${row.pm25}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${row.pm10 || 'N/A'}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${row.aqi}</td>
-                        `;
+                        const td1 = document.createElement('td');
+                        td1.textContent = new Date(row.timestamp).toLocaleString();
+                        td1.style.border = '1px solid #ddd';
+                        td1.style.padding = '8px';
+                        const td2 = document.createElement('td');
+                        td2.textContent = row.location;
+                        td2.style.border = '1px solid #ddd';
+                        td2.style.padding = '8px';
+                        const td3 = document.createElement('td');
+                        td3.textContent = row.pm1 || 'N/A';
+                        td3.style.border = '1px solid #ddd';
+                        td3.style.padding = '8px';
+                        const td4 = document.createElement('td');
+                        td4.textContent = row.pm25;
+                        td4.style.border = '1px solid #ddd';
+                        td4.style.padding = '8px';
+                        const td5 = document.createElement('td');
+                        td5.textContent = row.pm10 || 'N/A';
+                        td5.style.border = '1px solid #ddd';
+                        td5.style.padding = '8px';
+                        const td6 = document.createElement('td');
+                        td6.textContent = row.aqi;
+                        td6.style.border = '1px solid #ddd';
+                        td6.style.padding = '8px';
+                        tr.appendChild(td1);
+                        tr.appendChild(td2);
+                        tr.appendChild(td3);
+                        tr.appendChild(td4);
+                        tr.appendChild(td5);
+                        tr.appendChild(td6);
                         tbody.appendChild(tr);
                     });
                 })
