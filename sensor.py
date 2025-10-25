@@ -19,7 +19,11 @@ class SEN0460:
 
     def __init__(self, bus=1, addr=0x19):
         """Initialize the sensor with the I2C bus and address."""
-        self.bus = smbus2.SMBus(bus)
+        try:
+            self.bus = smbus2.SMBus(bus)
+        except Exception as e:
+            self.bus = None
+            print(f"Failed to initialize I2C bus: {e}")
         self.addr = addr
 
     def gain_particle_concentration_ugm3(self, PMtype):

@@ -18,10 +18,12 @@ init_db()
 SETTINGS_FILE = 'settings.json'
 
 def load_settings():
+    defaults = {"update_interval": 5000, "power_save": True, "manual_location": ""}
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, 'r') as f:
-            return json.load(f)
-    return {"update_interval": 5000, "power_save": True}
+            loaded = json.load(f)
+        defaults.update(loaded)
+    return defaults
 
 def save_settings(settings):
     with open(SETTINGS_FILE, 'w') as f:
@@ -52,28 +54,31 @@ def index():
 
 @app.route('/api/data')
 def data():
-    settings = load_settings()
-    sensor.awake()
-    time.sleep(1)
-    concentrations = sensor.gain_all_concentrations()
-    counts = sensor.gain_particle_counts()
-    version = sensor.gain_version()
-    if settings['power_save']:
-        sensor.set_lowpower()
-    if concentrations['pm25'] is not None:
-        aqi = calculate_aqi(concentrations['pm25'])
-        location = settings.get('manual_location', '') or get_location()
-        insert_reading(location, concentrations['pm1'], concentrations['pm25'], concentrations['pm10'], aqi, counts)
-        return jsonify({
-            'pm1': concentrations['pm1'],
-            'pm25': concentrations['pm25'],
-            'pm10': concentrations['pm10'],
-            'particles': counts,
-            'version': version,
-            'aqi': aqi
-        })
-    else:
-        return jsonify({'error': 'Failed to read sensor'})
+    try:
+        settings = load_settings()
+        sensor.awake()
+        time.sleep(1)
+        concentrations = sensor.gain_all_concentrations()
+        counts = sensor.gain_particle_counts()
+        version = sensor.gain_version()
+        if settings['power_save']:
+            sensor.set_lowpower()
+        if concentrations['pm25'] is not None:
+            aqi = calculate_aqi(concentrations['pm25'])
+            location = settings.get('manual_location', '') or get_location()
+            insert_reading(location, concentrations['pm1'], concentrations['pm25'], concentrations['pm10'], aqi, counts)
+            return jsonify({
+                'pm1': concentrations['pm1'],
+                'pm25': concentrations['pm25'],
+                'pm10': concentrations['pm10'],
+                'particles': counts,
+                'version': version,
+                'aqi': aqi
+            })
+        else:
+            return jsonify({'error': 'Failed to read sensor'})
+    except Exception as e:
+        return jsonify({'error': f'Sensor error: {str(e)}'})
 
 @app.route('/api/settings', methods=['GET', 'POST'])
 def settings_api():
