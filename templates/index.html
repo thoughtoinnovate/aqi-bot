@@ -132,7 +132,7 @@
                         <option value="year">All Years</option>
                     </select>
                 </label>
-                <label>Location: <input type="text" id="graph-location" placeholder="Leave empty for current"></label>
+                <label>Location: <select id="graph-location"><option value="">All Locations</option></select></label>
                 <button onclick="loadGraph()">Load Graph</button>
                 <button onclick="loadComparativeGraph()">Compare Locations</button>
                 </div>
@@ -239,6 +239,19 @@
                 document.getElementById('manual-location').value = data.manual_location || '';
             });
 
+        // Load locations
+        fetch('/api/locations')
+            .then(response => response.json())
+            .then(locations => {
+                const select = document.getElementById('graph-location');
+                locations.forEach(loc => {
+                    const option = document.createElement('option');
+                    option.value = loc;
+                    option.textContent = loc;
+                    select.appendChild(option);
+                });
+            });
+
         function showSection(section) {
             document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
             document.getElementById(section + '-section').style.display = 'block';
@@ -279,7 +292,7 @@
         function loadGraph() {
             const param = document.getElementById('graph-param').value;
             const range = document.getElementById('graph-range').value;
-            const location = document.getElementById('graph-location').value.trim();
+            const location = document.getElementById('graph-location').value;
             const url = `/api/graph_data?param=${param}&range=${range}${location ? '&location=' + encodeURIComponent(location) : ''}`;
             fetch(url)
                 .then(response => response.json())

@@ -5,6 +5,7 @@ import platform
 import json
 import os
 import requests
+import sqlite3
 from sensor import SEN0460, calculate_aqi
 from database import init_db, insert_reading, get_data, cleanup_old_data
 
@@ -88,6 +89,15 @@ def graph_data():
     location = request.args.get('location', None)
     data = get_data(param, range_type, location)
     return jsonify(data)
+
+@app.route('/api/locations')
+def get_locations():
+    conn = sqlite3.connect('air_quality.db')
+    c = conn.cursor()
+    c.execute('SELECT DISTINCT location FROM readings')
+    locations = [row[0] for row in c.fetchall()]
+    conn.close()
+    return jsonify(locations)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
