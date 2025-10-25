@@ -7,7 +7,7 @@ start:
 	@-pkill -f "aqibot" 2>/dev/null || true
 	@rm -f $(PID_FILE)
 	@sleep 1
-	@python app.py &
+	@nohup python app.py > /dev/null 2>&1 &
 	@echo $$! > $(PID_FILE)
 	@echo "App started with identifier aqibot. Access at http://$$(hostname -I | awk '{print $$1}'):5000"
 
