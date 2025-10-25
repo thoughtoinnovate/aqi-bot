@@ -1,0 +1,81 @@
+from flask import Flask, render_template, jsonify, request
+import time
+import socket
+import platform
+import json
+import os
+import requests
+from sensor import SEN0460, calculate_aqi
+
+app = Flask(__name__)
+sensor = SEN0460()
+
+SETTINGS_FILE = 'settings.json'
+
+def load_settings():
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, 'r') as f:
+            return json.load(f)
+    return {"update_interval": 5000, "power_save": True}
+
+def save_settings(settings):
+    with open(SETTINGS_FILE, 'w') as f:
+        json.dump(settings, f)
+
+def get_location():
+    try:
+        response = requests.get('https://ipinfo.io/json', timeout=5)
+        data = response.json()
+        return f"{data.get('city', 'Unknown')}, {data.get('region', 'Unknown')}, {data.get('country', 'Unknown')}"
+    except:
+        return "Location detection failed"
+
+@app.route('/')
+def index():
+    hostname = socket.gethostname()
+    ip = socket.gethostbyname(hostname)
+    location = get_location()
+    device_info = {
+        'hostname': hostname,
+        'ip': ip,
+        'platform': platform.platform(),
+        'sensor_model': 'DFRobot SEN0460 PM2.5 Laser Sensor',
+        'location': location
+    }
+    settings = load_settings()
+    return render_template('index.html', device_info=device_info, settings=settings)
+
+@app.route('/api/data')
+def data():
+    settings = load_settings()
+    sensor.awake()
+    time.sleep(1)
+    concentrations = sensor.gain_all_concentrations()
+    counts = sensor.gain_particle_counts()
+    version = sensor.gain_version()
+    if settings['power_save']:
+        sensor.set_lowpower()
+    if concentrations['pm25'] is not None:
+        aqi = calculate_aqi(concentrations['pm25'])
+        return jsonify({
+            'pm1': concentrations['pm1'],
+            'pm25': concentrations['pm25'],
+            'pm10': concentrations['pm10'],
+            'particles': counts,
+            'version': version,
+            'aqi': aqi
+        })
+    else:
+        return jsonify({'error': 'Failed to read sensor'})
+
+@app.route('/api/settings', methods=['GET', 'POST'])
+def settings_api():
+    if request.method == 'POST':
+        data = request.get_json()
+        save_settings(data)
+        return jsonify({'status': 'saved'})
+    else:
+        return jsonify(load_settings())
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

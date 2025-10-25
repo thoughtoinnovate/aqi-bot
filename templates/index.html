@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Quality Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>🌬️ Real-time Air Quality Monitor</h1>
+        <button id="settings-btn" style="position: absolute; top: 20px; right: 20px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">⚙️ Settings</button>
+        <div class="data-card">
+            <h3>Particulate Matter Concentrations</h3>
+            <div class="metric">
+                PM1.0: <span id="pm1" class="value">--</span> µg/m³
+            </div>
+            <div class="metric">
+                PM2.5: <span id="pm25" class="value">--</span> µg/m³
+            </div>
+            <div class="metric">
+                PM10: <span id="pm10" class="value">--</span> µg/m³
+            </div>
+            <div class="metric">
+                Air Quality Index: <span id="aqi" class="value aqi">--</span>
+            </div>
+            <div id="health-advice" class="health-advice"></div>
+        </div>
+        <div class="data-card">
+            <h3>Particle Counts (per 0.1L air)</h3>
+            <div class="metric">
+                0.3-0.5 µm: <span id="0_3_um" class="value">--</span>
+            </div>
+            <div class="metric">
+                0.5-1.0 µm: <span id="0_5_um" class="value">--</span>
+            </div>
+            <div class="metric">
+                1.0-2.5 µm: <span id="1_0_um" class="value">--</span>
+            </div>
+            <div class="metric">
+                2.5-5.0 µm: <span id="2_5_um" class="value">--</span>
+            </div>
+            <div class="metric">
+                5.0-10 µm: <span id="5_0_um" class="value">--</span>
+            </div>
+            <div class="metric">
+                >10 µm: <span id="10_um" class="value">--</span>
+            </div>
+        </div>
+        <div class="data-card">
+            <h3>Sensor Info</h3>
+            <div class="metric">
+                Firmware Version: <span id="version" class="value">--</span>
+            </div>
+        </div>
+        <div id="last-updated" class="last-updated">Last updated: --</div>
+        <div class="data-card">
+            <h3>Device Information</h3>
+            <p><strong>Hostname:</strong> {{ device_info.hostname }}</p>
+            <p><strong>IP Address:</strong> {{ device_info.ip }}</p>
+            <p><strong>Platform:</strong> {{ device_info.platform }}</p>
+            <p><strong>Sensor:</strong> {{ device_info.sensor_model }}</p>
+            <p><strong>Location:</strong> {{ device_info.location }}</p>
+        </div>
+        <div class="data-card">
+            <h3>AQI Categories & PM2.5 Ranges</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <th style="border: 1px solid #ddd; padding: 8px;">AQI Range</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">PM2.5 (µg/m³)</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Category</th>
+                </tr>
+                <tr class="good">
+                    <td>0-50</td>
+                    <td>0-12.0</td>
+                    <td>Good</td>
+                </tr>
+                <tr class="moderate">
+                    <td>51-100</td>
+                    <td>12.1-35.4</td>
+                    <td>Moderate</td>
+                </tr>
+                <tr class="unhealthy">
+                    <td>101-150</td>
+                    <td>35.5-55.4</td>
+                    <td>Unhealthy for Sensitive Groups</td>
+                </tr>
+                <tr class="very-unhealthy">
+                    <td>151-200</td>
+                    <td>55.5-150.4</td>
+                    <td>Unhealthy</td>
+                </tr>
+                <tr class="hazardous">
+                    <td>201-300</td>
+                    <td>150.5-250.4</td>
+                    <td>Very Unhealthy</td>
+                </tr>
+                <tr class="hazardous">
+                    <td>301-500</td>
+                    <td>250.5-500.4</td>
+                    <td>Hazardous</td>
+                </tr>
+            </table>
+            <p><strong>Ideal Range:</strong> AQI 0-50 (PM2.5 <12 µg/m³) - Air quality is considered satisfactory.</p>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; width: 300px;">
+            <h3>Settings</h3>
+            <form id="settings-form">
+                <label>Update Interval (seconds): <input type="number" id="update-interval" min="1" max="60"></label><br><br>
+                <label>Power Save: <input type="checkbox" id="power-save"></label><br><br>
+                <button type="submit">Save</button>
+                <button type="button" onclick="closeSettings()">Cancel</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        const healthLevels = {
+            good: { text: "Air quality is satisfactory, and air pollution poses little or no risk.", color: "#28a745" },
+            moderate: { text: "Air quality is acceptable; however, for some pollutants there may be a moderate health concern for a very small number of people.", color: "#ffc107" },
+            unhealthy: { text: "Members of sensitive groups may experience health effects. The general public is not likely to be affected.", color: "#fd7e14" },
+            "very-unhealthy": { text: "Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.", color: "#dc3545" },
+            hazardous: { text: "Health alert: everyone may experience more serious health effects.", color: "#6f42c1" }
+        };
+
+        function updateData() {
+            fetch('/api/data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        ['pm1', 'pm25', 'pm10', 'aqi', '0_3_um', '0_5_um', '1_0_um', '2_5_um', '5_0_um', '10_um', 'version'].forEach(id => {
+                            document.getElementById(id).textContent = 'Error';
+                        });
+                        document.getElementById('health-advice').textContent = 'Unable to retrieve air quality data.';
+                        document.getElementById('health-advice').style.backgroundColor = '#f8d7da';
+                    } else {
+                        document.getElementById('pm1').textContent = data.pm1 !== null ? data.pm1 : 'N/A';
+                        document.getElementById('pm25').textContent = data.pm25;
+                        document.getElementById('pm10').textContent = data.pm10 !== null ? data.pm10 : 'N/A';
+                        document.getElementById('aqi').textContent = data.aqi;
+                        const aqiElement = document.getElementById('aqi');
+                        aqiElement.className = 'value aqi';
+                        let level;
+                        if (data.aqi <= 50) {
+                            level = 'good';
+                        } else if (data.aqi <= 100) {
+                            level = 'moderate';
+                        } else if (data.aqi <= 150) {
+                            level = 'unhealthy';
+                        } else if (data.aqi <= 200) {
+                            level = 'very-unhealthy';
+                        } else {
+                            level = 'hazardous';
+                        }
+                        aqiElement.classList.add(level);
+                        const advice = document.getElementById('health-advice');
+                        advice.textContent = healthLevels[level].text;
+                        advice.style.backgroundColor = healthLevels[level].color + '20';
+                        advice.style.border = `1px solid ${healthLevels[level].color}`;
+
+                        // Highlight current category in table
+                        const rows = document.querySelectorAll('tr');
+                        rows.forEach(row => row.classList.remove('current'));
+                        const currentRow = document.querySelector(`tr.${level}`);
+                        if (currentRow) currentRow.classList.add('current');
+
+                        // Update particle counts
+                        Object.keys(data.particles).forEach(key => {
+                            const element = document.getElementById(key.replace('_', '_'));
+                            element.textContent = data.particles[key] !== null ? data.particles[key] : 'N/A';
+                        });
+
+                        // Update version
+                        document.getElementById('version').textContent = data.version !== null ? data.version : 'N/A';
+                    }
+                    document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    document.getElementById('pm25').textContent = 'Error';
+                    document.getElementById('aqi').textContent = 'Error';
+                    document.getElementById('health-advice').textContent = 'Connection error. Please check your network.';
+                    document.getElementById('health-advice').style.backgroundColor = '#f8d7da';
+                });
+        }
+        let updateInterval = {{ settings.update_interval }};
+        let intervalId = setInterval(updateData, updateInterval);
+        updateData(); // Initial load
+
+        // Load settings
+        fetch('/api/settings')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('update-interval').value = data.update_interval / 1000;
+                document.getElementById('power-save').checked = data.power_save;
+            });
+
+        // Settings modal
+        document.getElementById('settings-btn').onclick = () => {
+            document.getElementById('settings-modal').style.display = 'block';
+        };
+
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        document.getElementById('settings-form').onsubmit = (e) => {
+            e.preventDefault();
+            const newSettings = {
+                update_interval: parseInt(document.getElementById('update-interval').value) * 1000,
+                power_save: document.getElementById('power-save').checked
+            };
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(newSettings)
+            }).then(() => {
+                closeSettings();
+                // Update interval
+                clearInterval(intervalId);
+                updateInterval = newSettings.update_interval;
+                intervalId = setInterval(updateData, updateInterval);
+            });
+        };
+    </script>
+</body>
+</html>
