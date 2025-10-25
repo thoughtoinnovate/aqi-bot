@@ -84,6 +84,39 @@ def get_data(param, range_type, location=None):
         averaged[time_key] = {'value': avg_value, 'location': loc}
     return [{'time': k, 'value': v['value'], 'location': v['location']} for k, v in sorted(averaged.items())]
 
+def export_data(start_date=None, end_date=None, location=None):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    query = 'SELECT timestamp, location, pm1, pm25, pm10, aqi, particles FROM readings WHERE 1=1'
+    params = []
+    if start_date:
+        query += ' AND timestamp >= ?'
+        params.append(start_date)
+    if end_date:
+        query += ' AND timestamp <= ?'
+        params.append(end_date)
+    if location:
+        query += ' AND location = ?'
+        params.append(location)
+    query += ' ORDER BY timestamp'
+    c.execute(query, params)
+    rows = c.fetchall()
+    conn.close()
+    data = []
+    for row in rows:
+        ts, loc, pm1, pm25, pm10, aqi, particles_json = row
+        particles = json.loads(particles_json) if particles_json else {}
+        data.append({
+            'timestamp': ts,
+            'location': loc,
+            'pm1': pm1,
+            'pm25': pm25,
+            'pm10': pm10,
+            'aqi': aqi,
+            'particles': particles
+        })
+    return data
+
 def cleanup_old_data(days=365):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()

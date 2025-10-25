@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, make_response
 import time
 import socket
 import platform
@@ -6,8 +6,10 @@ import json
 import os
 import requests
 import sqlite3
+import csv
+from io import StringIO
 from sensor import SEN0460, calculate_aqi
-from database import init_db, insert_reading, get_data, cleanup_old_data
+from database import init_db, insert_reading, get_data, cleanup_old_data, export_data
 
 app = Flask(__name__)
 sensor = SEN0460()
@@ -98,6 +100,28 @@ def get_locations():
     locations = [row[0] for row in c.fetchall()]
     conn.close()
     return jsonify(locations)
+
+@app.route('/api/export')
+def export():
+    format_type = request.args.get('format', 'json')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    location = request.args.get('location')
+    data = export_data(start_date, end_date, location)
+    if format_type == 'csv':
+        si = StringIO()
+        writer = csv.DictWriter(si, fieldnames=['timestamp', 'location', 'pm1', 'pm25', 'pm10', 'aqi', 'particles'])
+        writer.writeheader()
+        for row in data:
+            row_copy = row.copy()
+            row_copy['particles'] = json.dumps(row_copy['particles'])
+            writer.writerow(row_copy)
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = "attachment; filename=air_quality_data.csv"
+        output.headers["Content-type"] = "text/csv"
+        return output
+    else:  # json
+        return jsonify(data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

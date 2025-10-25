@@ -188,8 +188,9 @@
                 </label>
                 <label>Location: <select id="graph-location"><option value="">All Locations</option></select></label>
                 <button onclick="loadGraph()" id="load-graph-btn">Load Graph</button>
-                <button onclick="loadComparativeGraph()" id="load-comp-btn">Compare Locations</button>
-                <div id="graph-loading" class="loading" style="display: none;"></div>
+                 <button onclick="loadComparativeGraph()" id="load-comp-btn">Compare Locations</button>
+                 <button onclick="exportData()" id="export-btn">Export Data (CSV)</button>
+                 <div id="graph-loading" class="loading" style="display: none;"></div>
                 </div>
                 <canvas id="graph-canvas" width="400" height="200"></canvas>
                 <h4>Comparative AQI by Location</h4>
@@ -511,6 +512,14 @@
                     btn.disabled = false;
                     loading.style.display = 'none';
                 });
+        }
+
+        function exportData() {
+            const param = document.getElementById('graph-param').value;
+            const range = document.getElementById('graph-range').value;
+            const location = document.getElementById('graph-location').value;
+            const url = `/api/export?format=csv${location ? '&location=' + encodeURIComponent(location) : ''}`;
+            window.open(url, '_blank');
         }
     </script>
 </body>
