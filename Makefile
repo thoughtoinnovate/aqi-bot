@@ -4,7 +4,9 @@ PID_FILE = app.pid
 
 start:
 	@echo "Starting Air Quality Monitor..."
-	@if [ -f $(PID_FILE) ]; then echo "App already running"; exit 1; fi
+	@-pkill -f "python app.py" 2>/dev/null || true
+	@rm -f $(PID_FILE)
+	@sleep 1
 	@python app.py &
 	@echo $$! > $(PID_FILE)
 	@echo "App started. Access at http://$$(hostname -I | awk '{print $$1}'):5000"
