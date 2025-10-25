@@ -4,9 +4,21 @@ body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
+}
+
+nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.container {
+    margin-top: 80px;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    min-height: calc(100vh - 80px);
 }
 
 .container {
@@ -14,7 +26,7 @@ body {
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     padding: 30px;
-    max-width: 600px;
+    max-width: 800px;
     width: 90%;
     text-align: center;
 }

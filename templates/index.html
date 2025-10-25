@@ -7,9 +7,16 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <nav style="background: #333; color: white; padding: 10px; margin-bottom: 20px;">
+        <h1 style="margin: 0; display: inline;">🌬️ Air Quality Monitor</h1>
+        <div style="float: right;">
+            <button onclick="showSection('dashboard')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Dashboard</button>
+            <button onclick="showSection('graphs')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Graphs</button>
+            <button id="settings-btn" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">⚙️ Settings</button>
+        </div>
+    </nav>
     <div class="container">
-        <h1>🌬️ Real-time Air Quality Monitor</h1>
-        <button id="settings-btn" style="position: absolute; top: 20px; right: 20px; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">⚙️ Settings</button>
+        <div id="dashboard-section" class="section">
         <div class="data-card">
             <h3>Particulate Matter Concentrations</h3>
             <div class="metric">
@@ -103,29 +110,32 @@
             </table>
             <p><strong>Ideal Range:</strong> AQI 0-50 (PM2.5 <12 µg/m³) - Air quality is considered satisfactory.</p>
         </div>
-        <div class="data-card">
-            <h3>Data Graphs</h3>
-            <div>
-                <label>Parameter: 
-                    <select id="graph-param">
-                        <option value="aqi">AQI</option>
-                        <option value="pm1">PM1.0</option>
-                        <option value="pm25">PM2.5</option>
-                        <option value="pm10">PM10</option>
-                    </select>
-                </label>
-                <label>Time Range: 
-                    <select id="graph-range">
-                        <option value="hour">Last 24 Hours</option>
-                        <option value="day">Last 7 Days</option>
-                        <option value="week">Last 4 Weeks</option>
-                        <option value="month">Last 12 Months</option>
-                        <option value="year">All Years</option>
-                    </select>
-                </label>
-                <button onclick="loadGraph()">Load Graph</button>
+        </div>
+        <div id="graphs-section" class="section" style="display: none;">
+            <div class="data-card">
+                <h3>Data Graphs</h3>
+                <div>
+                    <label>Parameter: 
+                        <select id="graph-param">
+                            <option value="aqi">AQI</option>
+                            <option value="pm1">PM1.0</option>
+                            <option value="pm25">PM2.5</option>
+                            <option value="pm10">PM10</option>
+                        </select>
+                    </label>
+                    <label>Time Range: 
+                        <select id="graph-range">
+                            <option value="hour">Last 24 Hours</option>
+                            <option value="day">Last 7 Days</option>
+                            <option value="week">Last 4 Weeks</option>
+                            <option value="month">Last 12 Months</option>
+                            <option value="year">All Years</option>
+                        </select>
+                    </label>
+                    <button onclick="loadGraph()">Load Graph</button>
+                </div>
+                <canvas id="graph-canvas" width="400" height="200"></canvas>
             </div>
-            <canvas id="graph-canvas" width="400" height="200"></canvas>
         </div>
     </div>
 
@@ -224,6 +234,11 @@
                 document.getElementById('power-save').checked = data.power_save;
                 document.getElementById('manual-location').value = data.manual_location || '';
             });
+
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+            document.getElementById(section + '-section').style.display = 'block';
+        }
 
         // Settings modal
         document.getElementById('settings-btn').onclick = () => {
