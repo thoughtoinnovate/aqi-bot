@@ -123,18 +123,22 @@
                             <option value="pm10">PM10</option>
                         </select>
                     </label>
-                    <label>Time Range: 
-                        <select id="graph-range">
-                            <option value="hour">Last 24 Hours</option>
-                            <option value="day">Last 7 Days</option>
-                            <option value="week">Last 4 Weeks</option>
-                            <option value="month">Last 12 Months</option>
-                            <option value="year">All Years</option>
-                        </select>
-                    </label>
-                    <button onclick="loadGraph()">Load Graph</button>
+                <label>Time Range: 
+                    <select id="graph-range">
+                        <option value="hour">Last 24 Hours</option>
+                        <option value="day">Last 7 Days</option>
+                        <option value="week">Last 4 Weeks</option>
+                        <option value="month">Last 12 Months</option>
+                        <option value="year">All Years</option>
+                    </select>
+                </label>
+                <label>Location: <input type="text" id="graph-location" placeholder="Leave empty for current"></label>
+                <button onclick="loadGraph()">Load Graph</button>
+                <button onclick="loadComparativeGraph()">Compare Locations</button>
                 </div>
                 <canvas id="graph-canvas" width="400" height="200"></canvas>
+                <h4>Comparative AQI by Location</h4>
+                <canvas id="comp-graph-canvas" width="400" height="200"></canvas>
             </div>
         </div>
     </div>
@@ -275,7 +279,9 @@
         function loadGraph() {
             const param = document.getElementById('graph-param').value;
             const range = document.getElementById('graph-range').value;
-            fetch(`/api/graph_data?param=${param}&range=${range}`)
+            const location = document.getElementById('graph-location').value.trim();
+            const url = `/api/graph_data?param=${param}&range=${range}${location ? '&location=' + encodeURIComponent(location) : ''}`;
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     const labels = data.map(d => d.time);
@@ -287,7 +293,7 @@
                         data: {
                             labels: labels,
                             datasets: [{
-                                label: param.toUpperCase(),
+                                label: `${param.toUpperCase()} (${location || 'Current Location'})`,
                                 data: values,
                                 borderColor: 'rgba(75, 192, 192, 1)',
                                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -299,6 +305,39 @@
                             scales: {
                                 y: { beginAtZero: true }
                             }
+                        }
+                    });
+                });
+        }
+
+        let compChart;
+        function loadComparativeGraph() {
+            const range = document.getElementById('graph-range').value;
+            fetch(`/api/graph_data?param=aqi&range=${range}`)
+                .then(response => response.json())
+                .then(allData => {
+                    // Group by location
+                    const locationData = {};
+                    allData.forEach(d => {
+                        if (!locationData[d.location]) locationData[d.location] = [];
+                        locationData[d.location].push(d);
+                    });
+                    const datasets = Object.keys(locationData).map((loc, i) => ({
+                        label: loc,
+                        data: locationData[loc].map(d => d.value),
+                        borderColor: `hsl(${i * 360 / Object.keys(locationData).length}, 70%, 50%)`,
+                        backgroundColor: 'transparent',
+                        tension: 0.1
+                    }));
+                    const labels = allData.slice(0, datasets[0]?.data.length || 0).map(d => d.time);
+                    const ctx = document.getElementById('comp-graph-canvas').getContext('2d');
+                    if (compChart) compChart.destroy();
+                    compChart = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels, datasets },
+                        options: {
+                            responsive: true,
+                            scales: { y: { beginAtZero: true } }
                         }
                     });
                 });

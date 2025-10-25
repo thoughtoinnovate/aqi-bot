@@ -11,6 +11,6 @@ start:
 
 stop:
 	@echo "Stopping Air Quality Monitor..."
-	@if [ -f $(PID_FILE) ]; then kill `cat $(PID_FILE)` && rm $(PID_FILE); else echo "App not running"; fi
+	@if [ -f $(PID_FILE) ] && kill -0 `cat $(PID_FILE)` 2>/dev/null; then kill `cat $(PID_FILE)` && rm $(PID_FILE) && echo "App stopped"; else echo "App not running" && rm -f $(PID_FILE); fi
 
 restart: stop start

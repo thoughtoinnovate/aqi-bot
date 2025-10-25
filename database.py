@@ -45,7 +45,7 @@ def get_data(param, range_type, location=None):
     else:  # year or all
         start = datetime.min
 
-    query = f'SELECT timestamp, {param} FROM readings WHERE timestamp >= ?'
+    query = f'SELECT timestamp, {param}, location FROM readings WHERE timestamp >= ?'
     params = [start.isoformat()]
     if location:
         query += ' AND location = ?'
@@ -57,7 +57,7 @@ def get_data(param, range_type, location=None):
 
     # Group by time unit
     data = {}
-    for ts, value in rows:
+    for ts, value, loc in rows:
         dt = datetime.fromisoformat(ts)
         if range_type == 'hour':
             key = dt.strftime('%H:00')
@@ -72,11 +72,17 @@ def get_data(param, range_type, location=None):
 
         if key not in data:
             data[key] = []
-        data[key].append(value)
+        data[key].append((value, loc))
 
     # Average values
-    averaged = {k: sum(v)/len(v) for k, v in data.items()}
-    return [{'time': k, 'value': v} for k, v in sorted(averaged.items())]
+    averaged = {}
+    for time_key, value_loc_list in data.items():
+        total = sum(v for v, l in value_loc_list)
+        avg_value = total / len(value_loc_list)
+        # Use the location of the first reading for that time (assuming same location per time)
+        loc = value_loc_list[0][1] if value_loc_list else 'Unknown'
+        averaged[time_key] = {'value': avg_value, 'location': loc}
+    return [{'time': k, 'value': v['value'], 'location': v['location']} for k, v in sorted(averaged.items())]
 
 def cleanup_old_data(days=365):
     conn = sqlite3.connect(DB_FILE)
