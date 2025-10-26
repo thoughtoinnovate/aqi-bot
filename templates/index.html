@@ -31,13 +31,16 @@
                  <button onclick="openLocationModal()" style="margin-left: 10px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Change</button>
              </div>
              <div id="health-advice" class="health-advice" style="text-align: center;"></div>
-             <div class="share-buttons" style="text-align: center; margin-top: 20px;">
-                 <button onclick="shareNative()" style="margin: 5px; padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Share</button>
-                 <button onclick="shareWhatsApp()" style="margin: 5px; padding: 8px 12px; background: #25D366; color: white; border: none; border-radius: 5px; cursor: pointer;">WhatsApp</button>
-                 <button onclick="shareTwitter()" style="margin: 5px; padding: 8px 12px; background: #1DA1F2; color: white; border: none; border-radius: 5px; cursor: pointer;">Twitter</button>
-                 <button onclick="shareFacebook()" style="margin: 5px; padding: 8px 12px; background: #1877F2; color: white; border: none; border-radius: 5px; cursor: pointer;">Facebook</button>
-                 <button onclick="shareCopy()" style="margin: 5px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">Copy</button>
-             </div>
+<div class="share-buttons" style="text-align: center; margin-top: 20px;">
+                  <button id="read-now-btn" onclick="readNow()" style="margin: 5px; padding: 8px 12px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; display: none;">📊 Read Now</button>
+                  <button onclick="shareScreenshot()" style="margin: 5px; padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">📸 Save Screenshot</button>
+                  <button onclick="shareScreenshotWithText()" style="margin: 5px; padding: 8px 12px; background: #17a2b8; color: white; border: none; border-radius: 5px; cursor: pointer;">📸 Share Screenshot</button>
+                  <button onclick="shareNative()" style="margin: 5px; padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Share</button>
+                  <button onclick="shareWhatsApp()" style="margin: 5px; padding: 8px 12px; background: #25D366; color: white; border: none; border-radius: 5px; cursor: pointer;">WhatsApp</button>
+                  <button onclick="shareTwitter()" style="margin: 5px; padding: 8px 12px; background: #1DA1F2; color: white; border: none; border-radius: 5px; cursor: pointer;">Twitter</button>
+                  <button onclick="shareFacebook()" style="margin: 5px; padding: 8px 12px; background: #1877F2; color: white; border: none; border-radius: 5px; cursor: pointer;">Facebook</button>
+                  <button onclick="shareCopy()" style="margin: 5px; padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">Copy</button>
+              </div>
          </div>
         <div id="last-updated" class="last-updated">Last updated: --</div>
         <div class="data-card">
@@ -215,14 +218,68 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; width: 300px;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; width: 400px; max-height: 80vh; overflow-y: auto;">
             <h3>Settings</h3>
             <form id="settings-form">
-                <label>Update Interval (seconds): <input type="number" id="update-interval" min="1" max="60"></label><br><br>
-                <label>Power Save: <input type="checkbox" id="power-save"></label><br><br>
-                <label>Manual Location: <input type="text" id="manual-location" placeholder="e.g., Home, Office"></label><br><br>
-                <button type="submit">Save</button>
-                <button type="button" onclick="closeSettings()">Cancel</button>
+                <div style="margin-bottom: 20px;">
+                    <h4>Reading Mode</h4>
+                    <label style="display: block; margin: 5px 0;">
+                        <input type="radio" name="reading-mode" value="realtime" checked> Real-time Mode
+                        <small style="display: block; color: #666; margin-left: 20px;">Continuous readings with minimal rest</small>
+                    </label>
+                    <label style="display: block; margin: 5px 0;">
+                        <input type="radio" name="reading-mode" value="less_aggressive"> Less Aggressive Mode
+                        <small style="display: block; color: #666; margin-left: 20px;">Balanced approach with moderate rest periods</small>
+                    </label>
+                    <label style="display: block; margin: 5px 0;">
+                        <input type="radio" name="reading-mode" value="lazy"> Lazy Mode
+                        <small style="display: block; color: #666; margin-left: 20px;">Manual readings only (Read Now button)</small>
+                    </label>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4>Reading Frequency</h4>
+                    <div id="realtime-options" style="display: block;">
+                        <label>Interval: 
+                            <select id="realtime-interval">
+                                <option value="5">5 seconds</option>
+                                <option value="10">10 seconds</option>
+                                <option value="20">20 seconds</option>
+                                <option value="40">40 seconds</option>
+                                <option value="60">60 seconds</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div id="less-aggressive-options" style="display: none;">
+                        <label>Interval: 
+                            <select id="less-aggressive-interval">
+                                <option value="5">5 minutes</option>
+                                <option value="10">10 minutes</option>
+                                <option value="30">30 minutes</option>
+                                <option value="60">1 hour</option>
+                                <option value="120">2 hours</option>
+                                <option value="240">4 hours</option>
+                                <option value="480">8 hours</option>
+                                <option value="1440">24 hours</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div id="lazy-options" style="display: none;">
+                        <p style="color: #666; font-style: italic;">Lazy mode: Use "Read Now" button on dashboard</p>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Power Save: <input type="checkbox" id="power-save"></label><br>
+                    <small style="color: #666;">Puts sensor to sleep between readings</small>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label>Manual Location: <input type="text" id="manual-location" placeholder="e.g., Home, Office" style="width: 100%;"></label>
+                </div>
+                
+                <button type="submit" style="background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Save Settings</button>
+                <button type="button" onclick="closeSettings()" style="background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">Cancel</button>
             </form>
         </div>
     </div>
@@ -241,6 +298,7 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script>
         const healthLevels = {
             good: { text: "Air quality is satisfactory, and air pollution poses little or no risk.", color: "#28a745" },
@@ -250,21 +308,39 @@
             hazardous: { text: "Health alert: everyone may experience more serious health effects.", color: "#6f42c1" }
         };
 
-        function updateData() {
+function updateData() {
+            console.log('DEBUG: updateData called');
             fetch('/api/data')
                 .then(response => response.json())
                 .then(data => {
+                    console.log('DEBUG: API response =', data);
                     if (data.error) {
                         ['pm1', 'pm25', 'pm10', 'aqi', '0_3_um', '0_5_um', '1_0_um', '2_5_um', '5_0_um', '10_um', 'version'].forEach(id => {
                             document.getElementById(id).textContent = 'Error';
                         });
                         document.getElementById('health-advice').textContent = 'Unable to retrieve air quality data.';
                         document.getElementById('health-advice').style.backgroundColor = '#f8d7da';
+                    } else if (data.mode && data.message) {
+                        // Handle mode-specific messages
+                        document.getElementById('health-advice').textContent = data.message;
+                        document.getElementById('health-advice').style.backgroundColor = '#fff3cd';
+                        document.getElementById('health-advice').style.border = '1px solid #ffc107';
+
+                        // Show mode indicator
+                        let modeText = 'Real-time Mode';
+                        if (data.mode === 'lazy') {
+                            modeText = 'Lazy Mode';
+                        } else if (data.mode === 'less_aggressive') {
+                            modeText = 'Less Aggressive Mode';
+                        }
+                        document.getElementById('last-updated').textContent = `${modeText} - ${data.message}`;
                     } else {
+                        // Normal data processing
                         document.getElementById('pm1').textContent = data.pm1 !== null ? data.pm1 : 'N/A';
                         document.getElementById('pm25').textContent = data.pm25;
                         document.getElementById('pm10').textContent = data.pm10 !== null ? data.pm10 : 'N/A';
                         document.getElementById('aqi').textContent = data.aqi;
+
                         const aqiElement = document.getElementById('aqi');
                         aqiElement.className = 'value aqi';
                         let level;
@@ -292,7 +368,7 @@
                         if (currentRow) currentRow.classList.add('current');
 
                         // Update particle counts and version only if in sensors section
-                        if (document.getElementById('sensors-section').style.display !== 'none') {
+                        if (document.getElementById('sensors-section').style.display !== 'none' && data.particles) {
                             Object.keys(data.particles).forEach(key => {
                                 const element = document.getElementById(key.replace('_', '_'));
                                 if (element) element.textContent = data.particles[key] !== null ? data.particles[key] : 'N/A';
@@ -300,8 +376,16 @@
                             const versionEl = document.getElementById('version');
                             if (versionEl) versionEl.textContent = data.version !== null ? data.version : 'N/A';
                         }
+
+                        // Show mode and next reading time
+                        if (data.mode) {
+                            const modeText = data.mode === 'lazy' ? 'Lazy Mode' :
+                                            data.mode === 'less_aggressive' ? 'Less Aggressive Mode' : 'Real-time Mode';
+                            document.getElementById('last-updated').textContent = `${modeText} - Last updated: ${new Date().toLocaleTimeString()}`;
+                        } else {
+                            document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                        }
                     }
-                    document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
@@ -311,17 +395,126 @@
                     document.getElementById('health-advice').style.backgroundColor = '#f8d7da';
                 });
         }
-        let updateInterval = {{ settings.update_interval }};
-        let intervalId = setInterval(updateData, updateInterval);
+
+        function updateModeUI(mode) {
+            // Show/hide Read Now button for lazy mode
+            const readNowBtn = document.getElementById('read-now-btn');
+            if (readNowBtn) {
+                readNowBtn.style.display = mode === 'lazy' ? 'inline-block' : 'none';
+            }
+            
+            // Show/hide interval options based on mode
+            document.getElementById('realtime-options').style.display = mode === 'realtime' ? 'block' : 'none';
+            document.getElementById('less-aggressive-options').style.display = mode === 'less_aggressive' ? 'block' : 'none';
+            document.getElementById('lazy-options').style.display = mode === 'lazy' ? 'block' : 'none';
+        }
+
+        function readNow() {
+            const btn = document.getElementById('read-now-btn');
+            const originalText = btn.textContent;
+            btn.textContent = '🔄 Reading...';
+            btn.disabled = true;
+            
+            fetch('/api/read_now')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('health-advice').textContent = data.error;
+                        document.getElementById('health-advice').style.backgroundColor = '#f8d7da';
+                    } else {
+                        // Update display with manual reading
+                        document.getElementById('pm1').textContent = data.pm1 !== null ? data.pm1 : 'N/A';
+                        document.getElementById('pm25').textContent = data.pm25;
+                        document.getElementById('pm10').textContent = data.pm10 !== null ? data.pm10 : 'N/A';
+                        document.getElementById('aqi').textContent = data.aqi;
+                        
+                        const aqiElement = document.getElementById('aqi');
+                        aqiElement.className = 'value aqi';
+                        let level;
+                        if (data.aqi <= 50) {
+                            level = 'good';
+                        } else if (data.aqi <= 100) {
+                            level = 'moderate';
+                        } else if (data.aqi <= 150) {
+                            level = 'unhealthy';
+                        } else if (data.aqi <= 200) {
+                            level = 'very-unhealthy';
+                        } else {
+                            level = 'hazardous';
+                        }
+                        aqiElement.classList.add(level);
+                        
+                        const advice = document.getElementById('health-advice');
+                        advice.textContent = healthLevels[level].text;
+                        advice.style.backgroundColor = healthLevels[level].color + '20';
+                        advice.style.border = `1px solid ${healthLevels[level].color}`;
+                        
+                        document.getElementById('last-updated').textContent = `Manual reading - ${new Date().toLocaleTimeString()}`;
+                        
+                        showNotification('Reading completed successfully!', 'success');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error reading now:', error);
+                    showNotification('Failed to read sensor', 'error');
+                })
+                .finally(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                });
+        }
+        let updateInterval = {{ settings.update_interval|default(5000) }};
+        let intervalId;
+        let currentMode = '{{ settings.reading_mode|default("realtime") }}';
+        console.log('DEBUG: Page loaded, currentMode =', currentMode);
+        
+        // Don't initialize interval here - wait for settings to load
         updateData(); // Initial load
 
         // Load settings
         fetch('/api/settings')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('update-interval').value = data.update_interval / 1000;
-                document.getElementById('power-save').checked = data.power_save;
+                currentMode = data.reading_mode || 'realtime';
+                updateInterval = data.custom_interval || 5000;
+                
+                // Update UI based on mode
+                updateModeUI(currentMode);
+                
+                // Set form values
+                document.getElementById('power-save').checked = data.power_save || false;
                 document.getElementById('manual-location').value = data.manual_location || '';
+                
+                // Set reading mode radio
+                const modeRadio = document.querySelector(`input[name="reading-mode"][value="${currentMode}"]`);
+                if (modeRadio) modeRadio.checked = true;
+                
+                // Set interval based on mode
+                if (currentMode === 'realtime') {
+                    const seconds = Math.floor(updateInterval / 1000);
+                    const realtimeSelect = document.getElementById('realtime-interval');
+                    if (realtimeSelect) realtimeSelect.value = seconds.toString();
+                } else if (currentMode === 'less_aggressive') {
+                    const minutes = Math.floor(updateInterval / 60000);
+                    const lessAggressiveSelect = document.getElementById('less-aggressive-interval');
+                    if (lessAggressiveSelect) lessAggressiveSelect.value = minutes.toString();
+                }
+                
+                // Initialize interval after settings are loaded
+                if (currentMode !== 'lazy') {
+                    if (intervalId) clearInterval(intervalId);
+                    intervalId = setInterval(updateData, updateInterval);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading settings:', error);
+                // Use defaults if settings fail to load
+                currentMode = 'realtime';
+                updateInterval = 5000;
+                updateModeUI(currentMode);
+                // Initialize interval with defaults
+                if (intervalId) clearInterval(intervalId);
+                intervalId = setInterval(updateData, updateInterval);
             });
 
         // Load locations
@@ -331,23 +524,29 @@
                 const selects = ['graph-location', 'data-location'];
                 selects.forEach(selId => {
                     const select = document.getElementById(selId);
-                    locations.forEach(loc => {
-                        const option = document.createElement('option');
-                        option.value = loc;
-                        option.textContent = loc;
-                        select.appendChild(option);
-                    });
+                    if (select) {
+                        locations.forEach(loc => {
+                            const option = document.createElement('option');
+                            option.value = loc;
+                            option.textContent = loc;
+                            select.appendChild(option);
+                        });
+                    }
                 });
                 // Set default to manual location if available
                 fetch('/api/settings')
                     .then(response => response.json())
                     .then(settings => {
                         if (settings.manual_location) {
-                            document.getElementById('graph-location').value = settings.manual_location;
-                            document.getElementById('data-location').value = settings.manual_location;
+                            const graphLocation = document.getElementById('graph-location');
+                            const dataLocation = document.getElementById('data-location');
+                            if (graphLocation) graphLocation.value = settings.manual_location;
+                            if (dataLocation) dataLocation.value = settings.manual_location;
                         }
-                    });
-            });
+                    })
+                    .catch(error => console.error('Error loading settings for locations:', error));
+            })
+            .catch(error => console.error('Error loading locations:', error));
 
         function showSection(section) {
             document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
@@ -423,25 +622,60 @@
             document.getElementById('settings-modal').style.display = 'none';
         }
 
+        // Handle reading mode changes
+        document.querySelectorAll('input[name="reading-mode"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                updateModeUI(radio.value);
+            });
+        });
+
         document.getElementById('settings-form').onsubmit = (e) => {
             e.preventDefault();
+            const mode = document.querySelector('input[name="reading-mode"]:checked').value;
+            let interval;
+            
+            if (mode === 'realtime') {
+                interval = document.getElementById('realtime-interval').value;
+            } else if (mode === 'less_aggressive') {
+                interval = document.getElementById('less-aggressive-interval').value;
+            } else {
+                interval = '0'; // Lazy mode
+            }
+            
             const newSettings = {
-                update_interval: parseInt(document.getElementById('update-interval').value) * 1000,
+                reading_mode: mode,
+                interval: interval,
                 power_save: document.getElementById('power-save').checked,
                 manual_location: document.getElementById('manual-location').value.trim()
             };
+            
             fetch('/api/settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(newSettings)
-            }).then(() => {
+            }).then(response => response.json())
+            .then(data => {
                 closeSettings();
-                // Update interval
-                clearInterval(intervalId);
-                updateInterval = newSettings.update_interval;
-                intervalId = setInterval(updateData, updateInterval);
-                // Reload page to update location
+                currentMode = mode;
+                updateInterval = data.settings ? data.settings.custom_interval || 5000 : 5000;
+                
+                // Update auto-refresh interval
+                if (intervalId) {
+                    clearInterval(intervalId);
+                }
+                if (mode !== 'lazy') {
+                    intervalId = setInterval(updateData, updateInterval);
+                }
+                
+                // Update UI
+                updateModeUI(mode);
+                
+                // Reload page to apply changes
                 location.reload();
+            })
+            .catch(error => {
+                console.error('Error saving settings:', error);
+                alert('Failed to save settings. Please try again.');
             });
         };
 
@@ -549,7 +783,6 @@
         }
 
         function loadReadings(append) {
-            alert('Loading data');
             if (append === undefined) append = false;
             const location = document.getElementById('data-location').value;
             const loading = document.getElementById('data-loading');
@@ -647,7 +880,6 @@
         }
 
         function loadLogs() {
-            alert('Loading logs');
             fetch('/api/logs')
                 .then(response => response.json())
                 .then(data => {
@@ -683,9 +915,8 @@
                 });
         }
 
-        // Load data and logs on page load
-        loadReadings();
-        loadLogs();
+        // Load data and logs on page load (only if not already loaded by showSection)
+        // These are called when sections are shown, so we don't need to call them here
 
         function shareWhatsApp() {
             const aqi = document.getElementById('aqi').textContent;
@@ -716,6 +947,175 @@
                 navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
             } else {
                 alert('Copy not supported in this browser.');
+            }
+        }
+
+        function shareScreenshot() {
+            const aqi = document.getElementById('aqi').textContent;
+            const pm25 = document.getElementById('pm25').textContent;
+            const timestamp = new Date().toLocaleString();
+            
+            // Show loading indicator
+            const btn = event ? event.target : this;
+            const originalText = btn.textContent;
+            btn.textContent = '📸 Capturing...';
+            btn.disabled = true;
+            
+            // Capture the dashboard section
+            const dashboardElement = document.getElementById('dashboard-section');
+            
+            html2canvas(dashboardElement, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                logging: false,
+                useCORS: true
+            }).then(canvas => {
+                // Convert canvas to blob
+                canvas.toBlob(blob => {
+                    // Create object URL for the image
+                    const imageUrl = URL.createObjectURL(blob);
+                    
+                    // Create download link
+                    const link = document.createElement('a');
+                    link.download = `air-quality-${timestamp.replace(/[/:]/g, '-')}.png`;
+                    link.href = imageUrl;
+                    link.click();
+                    
+                    // Clean up
+                    setTimeout(() => URL.revokeObjectURL(imageUrl), 100);
+                    
+                    // Reset button
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    
+                    // Show success message
+                    showNotification('Screenshot saved successfully!', 'success');
+                }, 'image/png');
+            }).catch(error => {
+                console.error('Screenshot failed:', error);
+                btn.textContent = originalText;
+                btn.disabled = false;
+                showNotification('Failed to capture screenshot', 'error');
+            });
+        }
+
+        function shareScreenshotWithText() {
+            const aqi = document.getElementById('aqi').textContent;
+            const pm25 = document.getElementById('pm25').textContent;
+            const timestamp = new Date().toLocaleString();
+            
+            // Show loading indicator
+            const btn = event ? event.target : this;
+            const originalText = btn.textContent;
+            btn.textContent = '📸 Capturing...';
+            btn.disabled = true;
+            
+            // Capture the dashboard section
+            const dashboardElement = document.getElementById('dashboard-section');
+            
+            html2canvas(dashboardElement, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                logging: false,
+                useCORS: true
+            }).then(canvas => {
+                // Convert canvas to blob
+                canvas.toBlob(blob => {
+                    // Create file input for sharing
+                    const file = new File([blob], `air-quality-${timestamp.replace(/[/:]/g, '-')}.png`, { type: 'image/png' });
+                    
+                    const text = `Air Quality Monitor\nAQI: ${aqi}\nPM2.5: ${pm25} µg/m³\nTime: ${timestamp}\n\nLive data: ${window.location.href}`;
+                    
+                    // Try to share with file
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        navigator.share({
+                            title: 'Air Quality Monitor',
+                            text: text,
+                            files: [file],
+                            url: window.location.href
+                        }).then(() => {
+                            showNotification('Shared successfully!', 'success');
+                        }).catch(err => {
+                            console.error('Share failed:', err);
+                            shareScreenshotFallback(canvas, text);
+                        }).finally(() => {
+                            btn.textContent = originalText;
+                            btn.disabled = false;
+                        });
+                    } else {
+                        shareScreenshotFallback(canvas, text);
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }
+                }, 'image/png');
+            }).catch(error => {
+                console.error('Screenshot failed:', error);
+                btn.textContent = originalText;
+                btn.disabled = false;
+                showNotification('Failed to capture screenshot', 'error');
+            });
+        }
+
+        function shareScreenshotFallback(canvas, text) {
+            // Convert to data URL and try to share
+            const dataUrl = canvas.toDataURL('image/png');
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Air Quality Monitor',
+                    text: text,
+                    url: window.location.href
+                }).catch(err => {
+                    console.error('Share failed:', err);
+                    // Fallback: copy to clipboard
+                    copyToClipboard(text);
+                });
+            } else {
+                copyToClipboard(text);
+            }
+        }
+
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                background: ${type === 'success' ? '#28a745' : '#dc3545'};
+                color: white;
+                border-radius: 5px;
+                z-index: 10000;
+                font-size: 14px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.textContent = message;
+            
+            // Add to page
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showNotification('Copied to clipboard!', 'success');
+                }).catch(err => {
+                    showNotification('Failed to copy to clipboard', 'error');
+                });
+            } else {
+                showNotification('Clipboard not supported in this browser', 'error');
             }
         }
 

@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request, make_response, current_app
 import json
 import sqlite3
+import time
 from sensor import SEN0460, calculate_aqi
 from database import insert_reading, get_data, export_data, cleanup_old_data
 from config import load_settings, save_settings, get_location
@@ -8,43 +9,154 @@ from config import load_settings, save_settings, get_location
 api = Blueprint('api', __name__)
 
 sensor = SEN0460()
+sensor_initialized = False
+last_reading_time = 0
+reading_mode = "realtime"
 
 @api.route('/data')
 def data():
+    global sensor_initialized, last_reading_time, reading_mode
     try:
         settings = load_settings()
+        current_mode = settings.get('reading_mode', 'realtime')
+        current_time = int(time.time() * 1000)  # Current time in milliseconds
+        
+        # For lazy mode, check if we should read (manual trigger only)
+        if current_mode == 'lazy':
+            # Only read if it's been requested (via /api/read_now endpoint)
+            if 'read_now' not in request.args:
+                return jsonify({
+                    'mode': 'lazy',
+                    'message': 'Lazy mode - use Read Now button or /api/read_now',
+                    'last_reading': last_reading_time
+                })
+        
+        # Check if enough time has passed for the current mode
+        interval = settings.get('custom_interval', 5000)
+        if current_time - last_reading_time < interval and current_mode != 'lazy':
+            return jsonify({
+                'mode': current_mode,
+                'message': f'Waiting for next reading in {((interval - (current_time - last_reading_time)) // 1000) + 1} seconds',
+                'last_reading': last_reading_time
+            })
+        
+        # Initialize sensor if not already done
+        if not sensor_initialized:
+            if not sensor.init_sensor():
+                return jsonify({'error': 'Failed to initialize sensor'})
+            sensor_initialized = True
+        
+        # Wake sensor and wait for stable reading
         sensor.awake()
-        import time
-        time.sleep(5)
+        sleep_time = 2 if current_mode == 'realtime' else 3
+        time.sleep(sleep_time)
+        
         concentrations = sensor.gain_all_concentrations()
         counts = sensor.gain_particle_counts()
         version = sensor.gain_version()
-        if settings['power_save']:
+        
+        # Put sensor to sleep based on mode
+        if settings['power_save'] or current_mode != 'realtime':
             sensor.set_lowpower()
+            
         if concentrations['pm25'] is not None:
             aqi = calculate_aqi(concentrations['pm25'])
             location = settings.get('manual_location', '') or get_location()
             insert_reading(location, concentrations['pm1'], concentrations['pm25'], concentrations['pm10'], aqi, counts)
-            current_app.logger.info(f"Inserted reading: PM2.5={concentrations['pm25']}, AQI={aqi}")
+            last_reading_time = current_time
+            current_app.logger.info(f"Inserted reading: PM2.5={concentrations['pm25']}, AQI={aqi}, Mode={current_mode}")
             return jsonify({
                 'pm1': concentrations['pm1'],
                 'pm25': concentrations['pm25'],
                 'pm10': concentrations['pm10'],
                 'particles': counts,
                 'version': version,
-                'aqi': aqi
+                'aqi': aqi,
+                'mode': current_mode,
+                'next_reading': current_time + interval
             })
         else:
-            return jsonify({'error': 'Failed to read sensor'})
+            return jsonify({'error': 'Failed to read sensor - invalid readings'})
     except Exception as e:
+        current_app.logger.error(f"Sensor error: {str(e)}")
+        return jsonify({'error': f'Sensor error: {str(e)}'})
+
+@api.route('/read_now')
+def read_now():
+    """Force a reading regardless of mode (for lazy mode)"""
+    global last_reading_time, sensor_initialized
+    try:
+        settings = load_settings()
+        
+        # Initialize sensor if not already done
+        if not sensor_initialized:
+            if not sensor.init_sensor():
+                return jsonify({'error': 'Failed to initialize sensor'})
+            sensor_initialized = True
+        
+        # Wake sensor and wait for stable reading
+        sensor.awake()
+        import time
+        time.sleep(3)
+        
+        concentrations = sensor.gain_all_concentrations()
+        counts = sensor.gain_particle_counts()
+        version = sensor.gain_version()
+        
+        # Put sensor to sleep after reading
+        sensor.set_lowpower()
+            
+        if concentrations['pm25'] is not None:
+            aqi = calculate_aqi(concentrations['pm25'])
+            location = settings.get('manual_location', '') or get_location()
+            insert_reading(location, concentrations['pm1'], concentrations['pm25'], concentrations['pm10'], aqi, counts)
+            last_reading_time = int(time.time() * 1000)
+            current_app.logger.info(f"Manual reading: PM2.5={concentrations['pm25']}, AQI={aqi}")
+            return jsonify({
+                'pm1': concentrations['pm1'],
+                'pm25': concentrations['pm25'],
+                'pm10': concentrations['pm10'],
+                'particles': counts,
+                'version': version,
+                'aqi': aqi,
+                'manual': True
+            })
+        else:
+            return jsonify({'error': 'Failed to read sensor - invalid readings'})
+    except Exception as e:
+        current_app.logger.error(f"Manual reading error: {str(e)}")
         return jsonify({'error': f'Sensor error: {str(e)}'})
 
 @api.route('/settings', methods=['GET', 'POST'])
 def settings_api():
     if request.method == 'POST':
         data = request.get_json()
+        
+        # Validate and set custom interval based on mode
+        mode = data.get('reading_mode', 'realtime')
+        if mode == 'realtime':
+            # Realtime mode: 5s, 10s, 20s, 40s, 60s
+            interval_map = {'5': 5000, '10': 10000, '20': 20000, '40': 40000, '60': 60000}
+            data['custom_interval'] = interval_map.get(data.get('interval', '5'), 5000)
+        elif mode == 'less_aggressive':
+            # Less aggressive mode: 5min, 10min, 30min, 1h, 2h, 4h, 8h, 24h
+            interval_map = {
+                '5': 300000,      # 5 minutes
+                '10': 600000,     # 10 minutes  
+                '30': 1800000,    # 30 minutes
+                '60': 3600000,    # 1 hour
+                '120': 7200000,   # 2 hours
+                '240': 14400000,  # 4 hours
+                '480': 28800000,  # 8 hours
+                '1440': 86400000  # 24 hours
+            }
+            data['custom_interval'] = interval_map.get(data.get('interval', '5'), 300000)
+        elif mode == 'lazy':
+            # Lazy mode: no automatic readings
+            data['custom_interval'] = 0
+        
         save_settings(data)
-        return jsonify({'status': 'saved'})
+        return jsonify({'status': 'saved', 'settings': data})
     else:
         return jsonify(load_settings())
 

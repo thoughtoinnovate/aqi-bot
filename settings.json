@@ -1,1 +1,1 @@
-{"update_interval": 5000, "power_save": true, "manual_location": "Test"}
+{"reading_mode": "realtime", "interval": "5", "power_save": false, "manual_location": "Sundernagar", "custom_interval": 5000}
