@@ -362,10 +362,52 @@ function updateData() {
                         document.getElementById('health-advice').textContent = 'Unable to retrieve air quality data.';
                         document.getElementById('health-advice').style.backgroundColor = '#f8d7da';
                     } else if (data.mode && data.message) {
-                        // Handle mode-specific messages
-                        document.getElementById('health-advice').textContent = data.message;
-                        document.getElementById('health-advice').style.backgroundColor = '#fff3cd';
-                        document.getElementById('health-advice').style.border = '1px solid #ffc107';
+                        // Handle mode-specific messages but show last known data
+                        fetch('/api/readings?limit=1')
+                            .then(response => response.json())
+                            .then(lastData => {
+                                if (lastData && lastData.length > 0) {
+                                    const lastReading = lastData[0];
+                                    // Display last known readings
+                                    document.getElementById('pm1').textContent = lastReading.pm1 !== null ? lastReading.pm1 : 'N/A';
+                                    document.getElementById('pm25').textContent = lastReading.pm25;
+                                    document.getElementById('pm10').textContent = lastReading.pm10 !== null ? lastReading.pm10 : 'N/A';
+                                    document.getElementById('aqi').textContent = lastReading.aqi;
+
+                                    const aqiElement = document.getElementById('aqi');
+                                    aqiElement.className = 'value aqi';
+                                    let level;
+                                    if (lastReading.aqi <= 50) {
+                                        level = 'good';
+                                    } else if (lastReading.aqi <= 100) {
+                                        level = 'moderate';
+                                    } else if (lastReading.aqi <= 150) {
+                                        level = 'unhealthy';
+                                    } else if (lastReading.aqi <= 200) {
+                                        level = 'very-unhealthy';
+                                    } else {
+                                        level = 'hazardous';
+                                    }
+                                    aqiElement.classList.add(level);
+                                    
+                                    // Update health advice based on last reading
+                                    const advice = document.getElementById('health-advice');
+                                    advice.textContent = `${healthLevels[level].text} (${data.message})`;
+                                    advice.style.backgroundColor = healthLevels[level].color + '20';
+                                    advice.style.border = `1px solid ${healthLevels[level].color}`;
+                                } else {
+                                    // No previous data available
+                                    document.getElementById('health-advice').textContent = data.message;
+                                    document.getElementById('health-advice').style.backgroundColor = '#fff3cd';
+                                    document.getElementById('health-advice').style.border = '1px solid #ffc107';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error fetching last reading:', error);
+                                document.getElementById('health-advice').textContent = data.message;
+                                document.getElementById('health-advice').style.backgroundColor = '#fff3cd';
+                                document.getElementById('health-advice').style.border = '1px solid #ffc107';
+                            });
 
                         // Show mode indicator
                         let modeText = 'Real-time Mode';
@@ -509,8 +551,11 @@ function updateData() {
         let currentMode = '{{ settings.reading_mode|default("realtime") }}';
         console.log('DEBUG: Page loaded, currentMode =', currentMode);
         
-        // Don't initialize interval here - wait for settings to load
-        updateData(); // Initial load
+        // Wait for DOM to be ready before initializing
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DEBUG: DOM loaded, initializing updateData');
+            updateData(); // Initial load
+        });
 
         // Load settings
         fetch('/api/settings')
@@ -1291,7 +1336,6 @@ function updateData() {
             autoScroll = !autoScroll;
             const btn = document.getElementById('auto-scroll-btn');
             btn.textContent = `📜 Auto Scroll: ${autoScroll ? 'ON' : 'OFF'}`;
-        }
         }
 
         // Stop sensor log updates when leaving the section
