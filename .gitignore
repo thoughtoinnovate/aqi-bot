@@ -2,3 +2,6 @@ air_quality.db
 app.pid
 __pycache__/
 *.pyc
+*.log
+sensor.log
+app.log
