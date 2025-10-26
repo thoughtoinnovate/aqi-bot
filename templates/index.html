@@ -15,7 +15,13 @@
              <button onclick="showSection('device')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Device Info</button>
              <button onclick="showSection('graphs')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Graphs</button>
               <button onclick="showSection('data')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Data Management</button>
-              <button onclick="showSection('logs')" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Logs</button>
+              <div style="display: inline-block; position: relative;">
+                  <button onclick="toggleLogsMenu()" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">Logs ▼</button>
+                  <div id="logs-submenu" style="display: none; position: absolute; top: 100%; left: 0; background: #444; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); z-index: 1001; min-width: 150px;">
+                      <button onclick="showSection('logs'); hideLogsMenu()" style="display: block; width: 100%; text-align: left; padding: 8px 15px; background: none; border: none; color: white; cursor: pointer;">📋 Application Logs</button>
+                      <button onclick="showSection('sensor-logs'); hideLogsMenu()" style="display: block; width: 100%; text-align: left; padding: 8px 15px; background: none; border: none; color: white; cursor: pointer;">🔍 Raw Sensor Logs</button>
+                  </div>
+              </div>
               <button id="settings-btn" style="background: none; border: none; color: white; cursor: pointer; margin: 0 10px;">⚙️ Settings</button>
         </div>
     </nav>
@@ -180,8 +186,43 @@
                      </tbody>
                  </table>
              </div>
+</div>
+         <div id="sensor-logs-section" class="section" style="display: none;">
+             <div class="data-card">
+                 <h3>Raw Sensor Logs</h3>
+                 <div class="sensor-controls">
+                     <button onclick="loadSensorLogs()">🔄 Load Sensor Logs</button>
+                     <button onclick="clearSensorLogs()">🗑️ Clear Logs</button>
+                     <button onclick="toggleAutoScroll()" id="auto-scroll-btn">📜 Auto Scroll: ON</button>
+                     <button onclick="downloadSensorLogs()">💾 Download Logs</button>
+                     <div style="margin-top: 10px;">
+                         <label>
+                             <input type="checkbox" id="show-debug" checked onchange="filterSensorLogs()"> 🔍 Debug
+                         </label>
+                         <label>
+                             <input type="checkbox" id="show-warnings" checked onchange="filterSensorLogs()"> ⚠️ Warnings
+                         </label>
+                         <label>
+                             <input type="checkbox" id="show-errors" checked onchange="filterSensorLogs()"> ❌ Errors
+                         </label>
+                         <label>
+                             <input type="checkbox" id="show-info" checked onchange="filterSensorLogs()"> ℹ️ Info
+                         </label>
+                     </div>
+                 </div>
+                 <div id="sensor-logs-container" style="background: #000; color: #00ff00; font-family: 'Courier New', monospace; font-size: 12px; padding: 15px; border-radius: 5px; height: 400px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #333;">
+                     <div id="sensor-logs-content">Click "Load Sensor Logs" to view raw sensor data...</div>
+                 </div>
+                 <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                     <strong>Legend:</strong> 
+                     <span style="color: #00ff00;">[INFO]</span> Normal operation | 
+                     <span style="color: #ffff00;">[WARNING]</span> Sensor warnings | 
+                     <span style="color: #ff0000;">[ERROR]</span> Sensor errors | 
+                     <span style="color: #00ffff;">[DEBUG]</span> Debug information
+                 </div>
+             </div>
          </div>
-      </div>
+       </div>
         <div id="graphs-section" class="section" style="display: none;">
             <div class="data-card">
                 <h3>Data Graphs</h3>
@@ -549,14 +590,38 @@ function updateData() {
             .catch(error => console.error('Error loading locations:', error));
 
         function showSection(section) {
+            // Stop sensor log updates when leaving sensor-logs section
+            if (section !== 'sensor-logs') {
+                stopSensorLogUpdates();
+            }
+            
             document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
             document.getElementById(section + '-section').style.display = 'block';
             if (section === 'data') {
                 loadReadings();
             } else if (section === 'logs') {
                 loadLogs();
+            } else if (section === 'sensor-logs') {
+                loadSensorLogs();
             }
         }
+
+        function toggleLogsMenu() {
+            const submenu = document.getElementById('logs-submenu');
+            submenu.style.display = submenu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function hideLogsMenu() {
+            document.getElementById('logs-submenu').style.display = 'none';
+        }
+
+        // Close logs menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const logsMenu = document.querySelector('[onclick*="toggleLogsMenu"]').parentElement;
+            if (!logsMenu.contains(event.target)) {
+                hideLogsMenu();
+            }
+        });
 
         // Settings modal
         document.getElementById('settings-btn').onclick = () => {
@@ -1131,6 +1196,147 @@ function updateData() {
                 }).catch(err => console.error('Error sharing:', err));
             } else {
                 alert('Native share not supported. Use the other buttons.');
+            }
+        }
+
+        // Sensor Logs functionality
+        let sensorLogInterval = null;
+        let autoScroll = true;
+        let allSensorLogs = [];
+
+        function loadSensorLogs() {
+            const container = document.getElementById('sensor-logs-content');
+            container.textContent = 'Loading sensor logs...';
+            
+            fetch('/api/sensor_logs')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        container.textContent = `Error: ${data.error}`;
+                        return;
+                    }
+                    allSensorLogs = data.logs || [];
+                    displaySensorLogs();
+                    
+                    // Start auto-refresh for real-time logs
+                    if (!sensorLogInterval) {
+                        sensorLogInterval = setInterval(() => {
+                            fetch('/api/sensor_logs?latest=true')
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.logs && data.logs.length > 0) {
+                                        allSensorLogs = allSensorLogs.concat(data.logs);
+                                        displaySensorLogs();
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error fetching latest sensor logs:', error);
+                                });
+                        }, 2000); // Update every 2 seconds
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading sensor logs:', error);
+                    container.textContent = `Error loading logs: ${error.message}`;
+                });
+        }
+
+        function displaySensorLogs() {
+            const container = document.getElementById('sensor-logs-content');
+            const showDebug = document.getElementById('show-debug').checked;
+            const showWarnings = document.getElementById('show-warnings').checked;
+            const showErrors = document.getElementById('show-errors').checked;
+            const showInfo = document.getElementById('show-info').checked;
+
+            let filteredLogs = allSensorLogs.filter(log => {
+                if (log.level === 'DEBUG' && !showDebug) return false;
+                if (log.level === 'WARNING' && !showWarnings) return false;
+                if (log.level === 'ERROR' && !showErrors) return false;
+                if (log.level === 'INFO' && !showInfo) return false;
+                return true;
+            });
+
+            // Keep only last 500 lines to prevent memory issues
+            if (filteredLogs.length > 500) {
+                filteredLogs = filteredLogs.slice(-500);
+                allSensorLogs = allSensorLogs.slice(-500);
+            }
+
+            const logLines = filteredLogs.map(log => {
+                const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                const level = log.level.padEnd(7);
+                let color = '#00ff00'; // Default green for INFO
+
+                if (log.level === 'WARNING') color = '#ffff00';
+                else if (log.level === 'ERROR') color = '#ff0000';
+                else if (log.level === 'DEBUG') color = '#00ffff';
+
+                return `<span style="color: #888888;">[${timestamp}]</span> <span style="color: ${color}; font-weight: bold;">[${level}]</span> ${log.message}`;
+            }).join('\n');
+
+            container.innerHTML = logLines || 'No logs to display';
+
+            // Auto-scroll to bottom if enabled
+            if (autoScroll) {
+                const logsContainer = document.getElementById('sensor-logs-container');
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+        }
+
+        function filterSensorLogs() {
+            displaySensorLogs();
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = document.getElementById('auto-scroll-btn');
+            btn.textContent = `📜 Auto Scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+        }
+        }
+
+        // Stop sensor log updates when leaving the section
+        function clearSensorLogs() {
+            if (confirm('Are you sure you want to clear all sensor logs? This cannot be undone.')) {
+                fetch('/api/sensor_logs', { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            allSensorLogs = [];
+                            displaySensorLogs();
+                            showNotification('Sensor logs cleared successfully', 'success');
+                        } else {
+                            showNotification('Failed to clear logs', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error clearing logs:', error);
+                        showNotification('Error clearing logs', 'error');
+                    });
+            }
+        }
+
+        function downloadSensorLogs() {
+            const logContent = allSensorLogs.map(log => 
+                `[${log.timestamp}] [${log.level}] ${log.message}`
+            ).join('\n');
+            
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sensor-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Sensor logs downloaded successfully', 'success');
+        }
+
+        function stopSensorLogUpdates() {
+            if (sensorLogInterval) {
+                clearInterval(sensorLogInterval);
+                sensorLogInterval = null;
             }
         }
     </script>
