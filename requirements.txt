@@ -1,0 +1,7 @@
+flask
+flask-cors
+smbus
+pytest
+pytest-flask
+requests
+pytest-mock

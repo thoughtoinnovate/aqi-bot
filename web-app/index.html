@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM2.5 Air Quality Monitor - Sundar Nagar</title>
+    <meta name="description" content="Real-time PM2.5 air quality monitoring dashboard for Sundar Nagar, HP">
+    <meta name="theme-color" content="#1a73e8">
+
+    <!-- Preload critical resources -->
+    <link rel="preload" href="css/styles.css" as="style">
+    <link rel="preload" href="js/app.js" as="script">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%231a73e8'/><text x='50' y='65' font-family='Arial' font-size='40' font-weight='bold' text-anchor='middle' fill='white'>PM</text></svg>">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="PM2.5 Air Quality Monitor">
+    <meta property="og:description" content="Real-time air quality monitoring for Sundar Nagar, HP">
+    <meta property="og:type" content="website">
+</head>
+<body>
+    <!-- Skip to main content link for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Header -->
+    <header role="banner">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>PM2.5 Air Quality Monitor</h1>
+                <div class="location">
+                    <svg class="location-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    <span>Sundar Nagar, Himachal Pradesh</span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button id="refresh-btn" class="refresh-btn" aria-label="Refresh data">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                    </svg>
+                    <span class="btn-text">Refresh</span>
+                </button>
+                <div id="connection-status" class="connection-status" role="status" aria-live="polite">
+                    <span class="status-dot status-online"></span>
+                    <span class="status-text">Online</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" role="main">
+        <!-- Loading Skeleton -->
+        <div id="loading-skeleton" class="loading-skeleton" aria-hidden="false">
+            <div class="skeleton-header">
+                <div class="skeleton-circle"></div>
+                <div class="skeleton-text"></div>
+            </div>
+            <div class="skeleton-grid">
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="error-state hidden" role="alert" aria-live="assertive">
+            <div class="error-content">
+                <svg class="error-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="none"/><path d="M13 16h-2v-6h2m0-4h-2V6h2"/>
+                </svg>
+                <h2>Connection Error</h2>
+                <p>Unable to connect to the air quality sensor. Please check your connection and try again.</p>
+                <button id="retry-btn" class="retry-btn">Try Again</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboard" class="dashboard hidden">
+            <!-- AQI Indicator -->
+            <section class="aqi-section" aria-labelledby="aqi-heading">
+                <div class="aqi-card">
+                    <div class="aqi-header">
+                        <h2 id="aqi-heading">Air Quality Index</h2>
+                        <div id="aqi-timestamp" class="timestamp">Loading...</div>
+                    </div>
+                    <div class="aqi-display">
+                        <div id="aqi-circle" class="aqi-circle" role="img" aria-label="Current AQI value">
+                            <div class="aqi-value">--</div>
+                            <div class="aqi-category">Loading...</div>
+                        </div>
+                        <div class="aqi-details">
+                            <div class="aqi-health-recommendation">
+                                <h3>Health Recommendation</h3>
+                                <p id="health-recommendation">Loading air quality data...</p>
+                            </div>
+                            <div class="aqi-breakdown">
+                                <div class="breakdown-item">
+                                    <span class="breakdown-label">PM2.5 Level:</span>
+                                    <span id="pm25-level" class="breakdown-value">-- µg/m³</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="breakdown-label">Status:</span>
+                                    <span id="sensor-status" class="breakdown-value status-good">Checking...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PM Measurements -->
+            <section class="pm-section" aria-labelledby="pm-heading">
+                <h2 id="pm-heading">Particulate Matter</h2>
+                <div class="pm-grid">
+                    <div class="pm-card">
+                        <h3>PM1.0</h3>
+                        <div class="pm-value">
+                            <span id="pm1-value" class="value">--</span>
+                            <span class="unit">µg/m³</span>
+                        </div>
+                        <div class="pm-bar">
+                            <div id="pm1-bar" class="bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="pm-card">
+                        <h3>PM2.5</h3>
+                        <div class="pm-value">
+                            <span id="pm25-value" class="value">--</span>
+                            <span class="unit">µg/m³</span>
+                        </div>
+                        <div class="pm-bar">
+                            <div id="pm25-bar" class="bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="pm-card">
+                        <h3>PM10</h3>
+                        <div class="pm-value">
+                            <span id="pm10-value" class="value">--</span>
+                            <span class="unit">µg/m³</span>
+                        </div>
+                        <div class="pm-bar">
+                            <div id="pm10-bar" class="bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Particle Distribution -->
+            <section class="particles-section" aria-labelledby="particles-heading">
+                <h2 id="particles-heading">Particle Size Distribution</h2>
+                <div class="particles-chart">
+                    <div class="chart-container">
+                        <div id="particles-chart" class="particles-bars" role="img" aria-label="Particle size distribution chart">
+                            <!-- Bars will be generated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="particles-legend">
+                        <div class="legend-item">
+                            <span class="legend-color color-03um"></span>
+                            <span class="legend-label">0.3-0.5 µm</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color color-05um"></span>
+                            <span class="legend-label">0.5-1.0 µm</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color color-10um"></span>
+                            <span class="legend-label">1.0-2.5 µm</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color color-25um"></span>
+                            <span class="legend-label">2.5-5.0 µm</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color color-50um"></span>
+                            <span class="legend-label">5.0-10 µm</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color color-100um"></span>
+                            <span class="legend-label">>10 µm</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sensor Status -->
+            <section class="status-section" aria-labelledby="status-heading">
+                <h2 id="status-heading">Sensor Status</h2>
+                <div class="status-grid">
+                    <div class="status-card">
+                        <h3>Warmup Status</h3>
+                        <div id="warmup-status" class="status-indicator">
+                            <div class="status-icon">⏳</div>
+                            <div class="status-text">Initializing...</div>
+                        </div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Data Integrity</h3>
+                        <div id="data-integrity" class="status-indicator">
+                            <div class="status-icon">🔍</div>
+                            <div class="status-text">Checking...</div>
+                        </div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Sensor Health</h3>
+                        <div id="sensor-health" class="status-indicator">
+                            <div class="status-icon">❤️</div>
+                            <div class="status-text">Monitoring...</div>
+                        </div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Last Update</h3>
+                        <div id="last-update" class="status-indicator">
+                            <div class="status-icon">🕐</div>
+                            <div class="status-text">Never</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer role="contentinfo">
+        <div class="footer-content">
+            <p>&copy; 2025 PM2.5 Air Quality Monitor | Powered by DFRobot SEN0460</p>
+            <div class="footer-links">
+                <a href="#main-content">Back to top</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
